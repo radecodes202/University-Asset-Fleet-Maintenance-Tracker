@@ -2,13 +2,13 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Asset, AssetCategory
-from accounts.permissions import IsManager, IsManagerOrReadOnly, CanViewCosts
-
+from accounts.permissions import IsManager, IsManagerOrReadOnly
+from .serializers import AssetCategorySerializer, StaffAssetSerializer, ManagerAssetSerializer
 
 class AssetCategoryListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsManagerOrReadOnly]
     queryset = AssetCategory.objects.all()
-
+    serializer_class = AssetCategorySerializer
 
 class AssetListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsManagerOrReadOnly]
@@ -32,6 +32,13 @@ class AssetListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
+    def get_serializer_class(self):
+        user = self.request.user
+
+        if user.is_manager:     
+            return ManagerAssetSerializer  
+
+        return StaffAssetSerializer
 
 class AssetDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsManagerOrReadOnly]
@@ -62,3 +69,11 @@ class AssetDetailView(generics.RetrieveUpdateDestroyAPIView):
             {'detail': f'{obj.asset_name} has been retired.'},
             status=status.HTTP_200_OK
         )
+
+    def get_serializer_class(self):
+        user = self.request.user
+        
+        if user.is_manager:     
+            return ManagerAssetSerializer  
+
+        return StaffAssetSerializer

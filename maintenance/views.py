@@ -3,10 +3,17 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import MaintenanceRequest, WorkOrder, MaintenanceHistory
 from accounts.permissions import IsManager, IsManagerOrAuditor
+from .serializers import (
+    MaintenanceRequestSerializer,
+    WorkOrderSerializer,
+    StaffMaintenanceHistorySerializer,
+    ManagerMaintenanceHistorySerializer,
+)
 
 
 class MaintenanceRequestListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = MaintenanceRequestSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -27,6 +34,7 @@ class MaintenanceRequestListCreateView(generics.ListCreateAPIView):
 
 class MaintenanceRequestDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = MaintenanceRequestSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -83,6 +91,7 @@ class BulkUpdateRequestStatusView(generics.GenericAPIView):
 
 class WorkOrderListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = WorkOrderSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -103,6 +112,7 @@ class WorkOrderListCreateView(generics.ListCreateAPIView):
 
 class WorkOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = WorkOrderSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -127,6 +137,11 @@ class WorkOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class MaintenanceHistoryListView(generics.ListAPIView):
     permission_classes = [IsManagerOrAuditor]
+
+    def get_serializer_class(self):
+        if self.request.user.is_manager:
+            return ManagerMaintenanceHistorySerializer
+        return StaffMaintenanceHistorySerializer
 
     def get_queryset(self):
         user = self.request.user
