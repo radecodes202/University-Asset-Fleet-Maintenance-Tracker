@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <title>Login | FleetTrack</title>
+</head>
+<body class="vh-100 d-flex align-items-center justify-content-center bg-dark">
+
+    <div class="card shadow p-4" style="width: 400px">
+        
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">FleetTrack</h2>
+            <p class="text-muted small">University Asset & Fleet System</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Email Address</label>
+                <input 
+                    type="email" 
+                    name="email"
+                    class="form-control" 
+                    placeholder="<name>@university.edu.ph"
+                    required
+                >
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Password</label>
+                <input 
+                    type="password"
+                    name="password" 
+                    class="form-control" 
+                    placeholder="••••••••"
+                    required
+                >
+            </div>
+
+            {% if error %}
+                <div class="alert alert-danger py-2 small">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary w-100 mt-2">
+                Sign In
+            </button>
+        </form>
+
+    </div>
+
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+</body>
+</html>

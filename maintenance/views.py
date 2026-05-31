@@ -142,7 +142,7 @@ class MaintenanceHistoryListView(generics.ListAPIView):
         if self.request.user.is_manager:
             return ManagerMaintenanceHistorySerializer
         return StaffMaintenanceHistorySerializer
-
+    
     def get_queryset(self):
         user = self.request.user
 

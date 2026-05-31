@@ -1,0 +1,80 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Dashboard | FleetTrack{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <h4 class="fw-bold">Dashboard</h4>
+    <p class="text-muted">Welcome back, {{ request.user.get_full_name }}</p>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 p-3">
+            <p class="text-muted small mb-1">Total Assets</p>
+            <h2 class="fw-bold text-primary" id="total-assets">--</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 p-3">
+            <p class="text-muted small mb-1">Pending Requests</p>
+            <h2 class="fw-bold text-warning" id="pending-requests">--</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 p-3">
+            <p class="text-muted small mb-1">Completed Repairs</p>
+            <h2 class="fw-bold text-success" id="completed-repairs">--</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 p-3">
+            <p class="text-muted small mb-1">Under Maintenance</p>
+            <h2 class="fw-bold text-danger" id="under-maintenance">--</h2>
+        </div>
+    </div>
+
+</div>
+
+{% if request.user.is_manager %}
+<div class="card shadow-sm border-0 p-3 mb-4" style="max-width: 300px">
+    <p class="text-muted small mb-1">Total Maintenance Cost</p>
+    <h2 class="fw-bold text-dark" id="total-cost">--</h2>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch dashboard data from API
+    async function loadDashboard() {
+        const response = await fetch('/api/dashboard/summary/', {
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            credentials: 'same-origin',
+        });
+
+        const data = await response.json();
+
+        document.getElementById('total-assets').textContent      = data.total_assets;
+        document.getElementById('pending-requests').textContent  = data.pending_requests;
+        document.getElementById('completed-repairs').textContent = data.completed_repairs;
+        document.getElementById('under-maintenance').textContent = data.under_maintenance;
+
+        if (data.total_maintenance_cost !== undefined) {
+            document.getElementById('total-cost').textContent = 
+                '₱' + Number(data.total_maintenance_cost).toLocaleString();
+        }
+    }
+
+    loadDashboard();
+</script>
+{% endblock %}

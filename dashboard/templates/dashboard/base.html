@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <title>{% block title %}base{% endblock %}</title>
+    <style>
+    .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    </style>
+
+</head>
+<body>
+
+    <div class="d-flex"> 
+        
+        <div class="bg-dark text-white vh-100 p-3 d-flex flex-column" style="width: 250px" >
+
+            <p class="fs-4 fw-bold mb-1">FleetTrack</p>
+            <p class="text-white small mb-4">University Asset System</p>
+            <!--Sidebar -->
+            <ul class="sidebar-nav p-0 list-unstyled ">
+                <li class="sidebar-header">
+                    <a href="" class="nav-link text-white py-2 px-3 rounded mb-1">Dashboard</a>
+                </li>
+                <li>
+                    <a href="" class="nav-link text-white py-2 px-3 rounded mb-1">Assets</a>
+                </li>
+                <li>
+                    <a href="" class="nav-link text-white py-2 px-3 rounded mb-1">Maintenance</a>
+                </li>
+                
+                {% if user.is_manager %}
+                    <li><a href="" class="nav-link text-white py-2 px-3 rounded mb-1">Work Orders</a></li>
+                {% endif %}
+
+               
+            </ul>
+
+            <div class="mt-auto border-top pt-3">
+                <p class="small text-muted mb-2">{{ user.get_full_name }}</p>
+                <form method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-light btn-sm w-100">
+                        Logout
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content flex-grow-1">
+            {% block content %}
+
+            {% endblock %}
+        </div>
+    </div>
+
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

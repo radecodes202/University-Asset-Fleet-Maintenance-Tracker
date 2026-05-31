@@ -17,4 +17,8 @@ urlpatterns = [
     # App endpoints
     path('api/assets/',      include('assets.urls')),
     path('api/maintenance/', include('maintenance.urls')),
+    path('api/dashboard/',   include('dashboard.urls')),
+
+    # Frontend
+    path('', include('accounts.urls')),
 ]
