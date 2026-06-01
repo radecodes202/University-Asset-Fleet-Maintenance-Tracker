@@ -109,7 +109,13 @@ class WorkOrderListCreateView(generics.ListCreateAPIView):
         if not self.request.user.is_manager:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Only Managers can create work orders.')
-        serializer.save()
+        
+        work_order = serializer.save()
+    
+        # Automatically set asset to UNDER_MAINTENANCE
+        asset = work_order.maintenance_request.asset
+        asset.current_status = 'UNDER_MAINTENANCE'
+        asset.save()
 
 
 class WorkOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -135,6 +141,40 @@ class WorkOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
             raise NotFound('Work order not found.')
 
         return obj
+
+    def update(self, request, *args, **kwargs):
+        partial  = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial
+        )
+        serializer.is_valid(raise_exception=True)
+
+        new_status = request.data.get('status', None)
+        asset      = instance.maintenance_request.asset
+
+        if new_status in ('COMPLETED', 'CANCELLED'):
+            asset.current_status = 'ACTIVE'
+            asset.save()
+
+            if new_status == 'COMPLETED':
+                maintenance_cost = request.data.get('maintenance_cost', 0)
+                remarks          = request.data.get('remarks', '')
+
+                MaintenanceHistory.objects.create(
+                    asset            = asset,
+                    work_order       = instance,
+                    maintenance_cost = maintenance_cost,
+                    remarks          = remarks,
+                    completed_by     = request.user,
+                )
+
+        serializer.save()
+        return Response(serializer.data)
+    
+    
 
 
 class MaintenanceHistoryListView(generics.ListAPIView):

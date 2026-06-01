@@ -1,27 +1,37 @@
 from rest_framework import serializers
 from .models import MaintenanceRequest, WorkOrder, MaintenanceHistory
 from assets.serializers import StaffAssetSerializer
-
+from assets.models import Asset
 
 class MaintenanceRequestSerializer(serializers.ModelSerializer):
-    asset = StaffAssetSerializer(read_only=True)
+    asset        = StaffAssetSerializer(read_only=True)
+    asset_id     = serializers.PrimaryKeyRelatedField(
+                        queryset=Asset.objects.all(),
+                        source='asset',
+                        write_only=True
+                    )
 
     class Meta:
         model = MaintenanceRequest
-        fields = ['asset',
-                  'requested_by',
-                  'problem_description',
-                  'date_requested',
-                  'status',
-                  'manager_notes',
-                  'date_resolved',
-                  ]
+        fields = [
+            'id',
+            'asset',
+            'asset_id',
+            'requested_by',
+            'problem_description',
+            'date_requested',
+            'status',
+            'manager_notes',
+            'date_resolved',
+        ]
 
 class WorkOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WorkOrder
-        fields = ['maintenance_request',
+        fields = [
+                  'id',
+                  'maintenance_request',
                   'assigned_technician',
                   'work_description',
                   'date_started',
