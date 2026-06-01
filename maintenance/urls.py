@@ -8,4 +8,6 @@ urlpatterns = [
     path('workorders/', views.WorkOrderListCreateView.as_view(), name='workorder-list'),
     path('workorders/<int:pk>/', views.WorkOrderDetailView.as_view(), name='workorder-detail'),
     path('history/', views.MaintenanceHistoryListView.as_view(), name='history-list'),
+    path('requests/page/', views.requests_page, name='requests'),
+    path('workorders/page/', views.workorders_page, name='workorders'),
 ]

@@ -1,0 +1,249 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Maintenance Requests | FleetTrack{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">Maintenance Requests</h4>
+        <p class="text-muted small">
+            {% if request.user.is_manager or request.user.is_auditor %}
+                All maintenance requests
+            {% else %}
+                Your maintenance requests
+            {% endif %}
+        </p>
+    </div>
+    {% if not request.user.is_auditor %}
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#submitRequestModal">
+        + Submit Request
+    </button>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card shadow-sm border-0 p-3 mb-4">
+    <div class="row g-2">
+        <div class="col-md-4">
+            <select id="status-filter" class="form-select">
+                <option value="">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="COMPLETED">Completed</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-secondary w-100" onclick="loadRequests()">Filter</button>
+        </div>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Asset</th>
+                    {% if request.user.is_manager or request.user.is_auditor %}
+                    <th>Requested By</th>
+                    {% endif %}
+                    <th>Problem</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    {% if request.user.is_manager %}
+                    <th>Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody id="requests-table-body">
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Loading requests...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Submit Request Modal -->
+{% if not request.user.is_auditor %}
+<div class="modal fade" id="submitRequestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Submit Maintenance Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Asset</label>
+                    <select id="request-asset" class="form-select">
+                        <option value="">Select asset...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Problem Description</label>
+                    <textarea 
+                        id="request-problem" 
+                        class="form-control" 
+                        rows="4"
+                        placeholder="Describe the problem in detail..."
+                    ></textarea>
+                </div>
+                <div id="request-error" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitRequest()">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadRequests() {
+        const status = document.getElementById('status-filter').value;
+        let url = '/api/maintenance/requests/?';
+        if (status) url += `status=${status}&`;
+
+        const response = await fetch(url, { credentials: 'same-origin' });
+        const data = await response.json();
+        const tbody = document.getElementById('requests-table-body');
+
+        if (!data.results || data.results.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No requests found.
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.results.map(req => `
+            <tr>
+                <td>${req.asset ? req.asset.asset_name : '-'}</td>
+                {% if request.user.is_manager or request.user.is_auditor %}
+                <td>${req.requested_by || '-'}</td>
+                {% endif %}
+                <td>${req.problem_description.substring(0, 50)}...</td>
+                <td>${req.date_requested ? req.date_requested.substring(0,10) : '-'}</td>
+                <td>
+                    <span class="badge ${getStatusBadge(req.status)}">
+                        ${req.status}
+                    </span>
+                </td>
+                {% if request.user.is_manager %}
+                <td>
+                    ${req.status === 'PENDING' ? `
+                        <button class="btn btn-success btn-sm" onclick="updateStatus(${req.id}, 'APPROVED')">
+                            Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm ms-1" onclick="updateStatus(${req.id}, 'REJECTED')">
+                            Reject
+                        </button>
+                    ` : '-'}
+                </td>
+                {% endif %}
+            </tr>
+        `).join('');
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'PENDING':   'bg-warning text-dark',
+            'APPROVED':  'bg-success',
+            'REJECTED':  'bg-danger',
+            'COMPLETED': 'bg-primary',
+        };
+        return badges[status] || 'bg-secondary';
+    }
+
+    async function loadAssets() {
+        const response = await fetch('/api/assets/', { credentials: 'same-origin' });
+        const data = await response.json();
+        const select = document.getElementById('request-asset');
+        if (select && data.results) {
+            data.results.forEach(asset => {
+                select.innerHTML += `<option value="${asset.id}">${asset.asset_name}</option>`;
+            });
+        }
+    }
+
+    async function submitRequest() {
+        const asset   = document.getElementById('request-asset').value;
+        const problem = document.getElementById('request-problem').value;
+        const errDiv  = document.getElementById('request-error');
+
+        if (!asset || !problem) {
+            errDiv.textContent = 'Please fill in all fields.';
+            errDiv.classList.remove('d-none');
+            return;
+        }
+
+        const response = await fetch('/api/maintenance/requests/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                asset: asset,
+                problem_description: problem,
+            }),
+        });
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(
+                document.getElementById('submitRequestModal')
+            ).hide();
+            loadRequests();
+        } else {
+            const err = await response.json();
+            errDiv.textContent = JSON.stringify(err);
+            errDiv.classList.remove('d-none');
+        }
+    }
+
+    async function updateStatus(id, newStatus) {
+        const response = await fetch(`/api/maintenance/requests/${id}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ status: newStatus }),
+        });
+
+        if (response.ok) {
+            loadRequests();
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(cookie => {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.split('=')[1]);
+                }
+            });
+        }
+        return cookieValue;
+    }
+
+    loadAssets();
+    loadRequests();
+</script>
+{% endblock %}

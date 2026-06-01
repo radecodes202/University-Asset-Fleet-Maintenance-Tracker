@@ -4,6 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Asset, AssetCategory
 from accounts.permissions import IsManager, IsManagerOrReadOnly
 from .serializers import AssetCategorySerializer, StaffAssetSerializer, ManagerAssetSerializer
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 
 class AssetCategoryListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsManagerOrReadOnly]
@@ -77,3 +79,7 @@ class AssetDetailView(generics.RetrieveUpdateDestroyAPIView):
             return ManagerAssetSerializer  
 
         return StaffAssetSerializer
+        
+@login_required(login_url='/login/')
+def assets_page(request):
+    return render(request, 'assets/assets.html')

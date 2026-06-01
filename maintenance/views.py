@@ -1,4 +1,6 @@
 from rest_framework import generics, status
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import MaintenanceRequest, WorkOrder, MaintenanceHistory
@@ -152,3 +154,11 @@ class MaintenanceHistoryListView(generics.ListAPIView):
         return MaintenanceHistory.objects.filter(
             asset__maintenance_requests__requested_by=user
         )
+
+@login_required(login_url='/login/')
+def requests_page(request):
+    return render(request, 'maintenance/requests.html')
+
+@login_required(login_url='/login/')
+def workorders_page(request):
+    return render(request, 'maintenance/workorders.html')

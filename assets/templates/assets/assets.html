@@ -1,0 +1,146 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Assets | FleetTrack{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">Assets</h4>
+        <p class="text-muted small">Manage university assets and equipment</p>
+    </div>
+    {% if request.user.is_manager %}
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssetModal">
+        + Add Asset
+    </button>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card shadow-sm border-0 p-3 mb-4">
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input type="text" id="search-input" class="form-control" placeholder="Search asset name...">
+        </div>
+        <div class="col-md-3">
+            <select id="status-filter" class="form-select">
+                <option value="">All Statuses</option>
+                <option value="ACTIVE">Active</option>
+                <option value="UNDER_MAINTENANCE">Under Maintenance</option>
+                <option value="RETIRED">Retired</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select id="category-filter" class="form-select">
+                <option value="">All Categories</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-secondary w-100" onclick="loadAssets()">Filter</button>
+        </div>
+    </div>
+</div>
+
+<!-- Assets Table -->
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Asset Name</th>
+                    <th>Category</th>
+                    <th>Serial Number</th>
+                    <th>Status</th>
+                    <th>Date Added</th>
+                    {% if request.user.is_manager %}
+                    <th>Purchase Cost</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody id="assets-table-body">
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Loading assets...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadAssets() {
+        const search   = document.getElementById('search-input').value;
+        const status   = document.getElementById('status-filter').value;
+        const category = document.getElementById('category-filter').value;
+
+        let url = '/api/assets/?';
+        if (search)   url += `search=${search}&`;
+        if (status)   url += `status=${status}&`;
+        if (category) url += `category=${category}&`;
+
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+        });
+
+        const data = await response.json();
+        const tbody = document.getElementById('assets-table-body');
+
+        if (!data.results || data.results.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No assets found.
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.results.map(asset => `
+            <tr>
+                <td>${asset.asset_name}</td>
+                <td>${asset.category ? asset.category.name : '-'}</td>
+                <td>${asset.serial_number}</td>
+                <td>
+                    <span class="badge ${getStatusBadge(asset.current_status)}">
+                        ${asset.current_status}
+                    </span>
+                </td>
+                <td>${asset.date_added ? asset.date_added.substring(0,10) : '-'}</td>
+                {% if request.user.is_manager %}
+                <td>₱${Number(asset.purchase_cost).toLocaleString()}</td>
+                {% endif %}
+            </tr>
+        `).join('');
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'ACTIVE':            'bg-success',
+            'UNDER_MAINTENANCE': 'bg-warning text-dark',
+            'RETIRED':           'bg-secondary',
+        };
+        return badges[status] || 'bg-light text-dark';
+    }
+
+    async function loadCategories() {
+        const response = await fetch('/api/assets/categories/', {
+            credentials: 'same-origin',
+        });
+        const data = await response.json();
+        const select = document.getElementById('category-filter');
+
+        if (data.results) {
+            data.results.forEach(cat => {
+                select.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+            });
+        }
+    }
+
+    loadCategories();
+    loadAssets();
+</script>
+{% endblock %}

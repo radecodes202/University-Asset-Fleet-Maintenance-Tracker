@@ -24,17 +24,21 @@
             <!--Sidebar -->
             <ul class="sidebar-nav p-0 list-unstyled ">
                 <li class="sidebar-header">
-                    <a href="" class="nav-link text-white py-2 px-3 rounded mb-1">Dashboard</a>
+                    <a href="{% url 'dashboard' %}" class="nav-link text-white py-2 px-3 rounded mb-1">Dashboard</a>
                 </li>
                 <li>
-                    <a href="" class="nav-link text-white py-2 px-3 rounded mb-1">Assets</a>
+                    <a href="{% url 'assets' %}" class="nav-link text-white py-2 px-3 rounded mb-1">Assets</a>
                 </li>
                 <li>
-                    <a href="" class="nav-link text-white py-2 px-3 rounded mb-1">Maintenance</a>
+                    <a href="{% url 'requests' %}" class="nav-link text-white py-2 px-3 rounded mb-1">Maintenance</a>
                 </li>
                 
                 {% if user.is_manager %}
-                    <li><a href="" class="nav-link text-white py-2 px-3 rounded mb-1">Work Orders</a></li>
+                <li>
+                    <a href="{% url 'workorders' %}" class="nav-link text-white py-2 px-3 rounded mb-1">
+                        Work Orders
+                    </a>
+                </li>
                 {% endif %}
 
                
@@ -42,7 +46,7 @@
 
             <div class="mt-auto border-top pt-3">
                 <p class="small text-muted mb-2">{{ user.get_full_name }}</p>
-                <form method="post" action="">
+                <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-light btn-sm w-100">
                         Logout
