@@ -23,6 +23,12 @@ class Asset(models.Model):
         RETIRED           = 'RETIRED',           'Retired'
 
     asset_name    = models.CharField(max_length=200)
+    asset_image = models.ImageField(
+                        upload_to='assets/',
+                        blank=True,
+                        null=True
+                    )
+
     category      = models.ForeignKey(
                         AssetCategory,
                         on_delete=models.PROTECT,

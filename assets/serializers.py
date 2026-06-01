@@ -13,7 +13,8 @@ class StaffAssetSerializer(serializers.ModelSerializer):
     class Meta: 
         model = Asset
         fields = ['id', 
-                  'asset_name', 
+                  'asset_image' 
+                  'asset_name',
                   'category', 
                   'serial_number', 
                   'purchase_date', 

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.views.generic import RedirectView
 from django.urls import path, include
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -21,4 +22,8 @@ urlpatterns = [
 
     # Frontend
     path('', include('accounts.urls')),
+    path('dashboard/', include('dashboard.urls')),
+
+    # Root redirect
+    path('', RedirectView.as_view(url='/login/')),
 ]
