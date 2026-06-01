@@ -202,3 +202,7 @@ def requests_page(request):
 @login_required(login_url='/login/')
 def workorders_page(request):
     return render(request, 'maintenance/workorders.html')
+
+@login_required(login_url='/login/')
+def history_page(request):
+    return render(request, 'maintenance/history.html')

@@ -43,7 +43,9 @@ class StaffMaintenanceHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MaintenanceHistory
-        fields = ['asset',
+        fields = [
+                  'id',
+                  'asset',
                   'work_order',
                   'remarks',
                   'completed_by',
@@ -53,7 +55,9 @@ class ManagerMaintenanceHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MaintenanceHistory
-        fields = ['asset',
+        fields = [
+                  'id',
+                  'asset',
                   'work_order',
                   'maintenance_cost',
                   'remarks',

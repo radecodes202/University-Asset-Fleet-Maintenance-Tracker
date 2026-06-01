@@ -1,6 +1,22 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from .models import User
+from .serializers import UserManagementSerializer, CreateUserSerializer
+from .permissions import IsManager
+
+class UserListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsManager]
+
+    def get_queryset(self):
+        return User.objects.all().order_by('last_name')
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return CreateUserSerializer
+        return UserManagementSerializer
 
 
 def login_view(request):
@@ -26,3 +42,8 @@ def logout_view(request):
     if request.method == 'POST':
         logout(request)
         return redirect('login')
+
+
+@login_required(login_url='/login/')
+def users_page(request):
+    return render(request, 'accounts/users.html')

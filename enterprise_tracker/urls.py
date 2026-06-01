@@ -12,15 +12,16 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # Auth endpoints
+    # JWT Auth
     path('api/auth/login/',   TokenObtainPairView.as_view(),  name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(),     name='token_refresh'),
     path('api/auth/logout/',  TokenBlacklistView.as_view(),   name='token_blacklist'),
 
-    # App endpoints
+    # API endpoints
     path('api/assets/',      include('assets.urls')),
     path('api/maintenance/', include('maintenance.urls')),
     path('api/dashboard/',   include('dashboard.urls')),
+    path('api/accounts/',    include('accounts.urls')),
 
     # Frontend
     path('', include('accounts.urls')),
