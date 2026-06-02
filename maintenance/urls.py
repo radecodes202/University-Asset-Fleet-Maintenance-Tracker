@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = 'maintenance'
+
 urlpatterns = [
     path('requests/', views.MaintenanceRequestListCreateView.as_view(), name='request-list'),
     path('requests/<int:pk>/', views.MaintenanceRequestDetailView.as_view(), name='request-detail'),

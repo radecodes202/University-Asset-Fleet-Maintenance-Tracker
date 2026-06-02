@@ -18,35 +18,20 @@
     </div>
 </div>
 
-<!-- Status Filter Pills -->
-<div class="mb-4">
-    <div class="d-flex gap-2 flex-wrap">
-        <button class="btn btn-sm btn-outline-secondary active" onclick="filterByStatus('')">
-            <i class="bi bi-funnel"></i> All
-        </button>
-        <button class="btn btn-sm btn-outline-info" onclick="filterByStatus('OPEN')">
-            <i class="bi bi-exclamation-circle"></i> Open
-        </button>
-        <button class="btn btn-sm btn-outline-warning" onclick="filterByStatus('IN_PROGRESS')">
-            <i class="bi bi-arrow-repeat"></i> In Progress
-        </button>
-        <button class="btn btn-sm btn-outline-success" onclick="filterByStatus('COMPLETED')">
-            <i class="bi bi-check-circle"></i> Completed
-        </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="filterByStatus('CANCELLED')">
-            <i class="bi bi-x-circle"></i> Cancelled
-        </button>
-    </div>
-</div>
-
-<!-- Search Bar -->
+<!-- Filters -->
 <div class="card shadow-sm border-0 p-3 mb-4">
     <div class="row g-2">
-        <div class="col-md-10">
-            <input type="text" id="search-input" class="form-control" placeholder="Search work order ID, asset name, or technician...">
+        <div class="col-md-4">
+            <select id="status-filter" class="form-select">
+                <option value="">All Statuses</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+            </select>
         </div>
         <div class="col-md-2">
-            <button class="btn btn-secondary w-100" onclick="loadWorkOrders()"><i class="bi bi-search"></i> Search</button>
+            <button class="btn btn-secondary w-100" onclick="loadWorkOrders()">Filter</button>
         </div>
     </div>
 </div>
@@ -210,16 +195,6 @@
 {% block scripts %}
 <script>
     let currentWorkOrderId = null;
-    let currentStatusFilter = '';
-
-    function filterByStatus(status) {
-        currentStatusFilter = status;
-        document.querySelectorAll('.page-header .btn-outline-secondary, .page-header .btn-outline-info, .page-header .btn-outline-warning, .page-header .btn-outline-success, .page-header .btn-outline-danger').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        event.target.closest('button').classList.add('active');
-        loadWorkOrders();
-    }
 
     function openCompleteModal(id) {
         currentWorkOrderId = id;
@@ -268,10 +243,9 @@
     }
 
     async function loadWorkOrders() {
-        const searchInput = document.getElementById('search-input').value;
+        const statusFilter = document.getElementById('status-filter').value;
         let url = '/api/maintenance/workorders/?';
-        if (currentStatusFilter) url += `status=${currentStatusFilter}&`;
-        if (searchInput) url += `search=${searchInput}&`;
+        if (statusFilter) url += `status=${statusFilter}&`;
 
         const response = await fetch(url, { credentials: 'same-origin' });
         const data = await response.json();
