@@ -18,9 +18,12 @@
 
 <!-- Filters -->
 <div class="card shadow-sm border-0 p-3 mb-4">
-    <div class="row g-2">
-        <div class="col-md-4">
-            <input type="text" id="search-input" class="form-control" placeholder="Search by name or email...">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" class="form-control" placeholder="Search by name, email, employee ID, or department...">
+            </div>
         </div>
         <div class="col-md-3">
             <select id="role-filter" class="form-select">
@@ -36,9 +39,6 @@
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
             </select>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-secondary w-100" onclick="loadUsers()">Filter</button>
         </div>
     </div>
 </div>
@@ -125,52 +125,24 @@
 
 {% block scripts %}
 <script>
-    async function loadUsers() {
-        const search = document.getElementById('search-input').value;
-        const role   = document.getElementById('role-filter').value;
-        const status = document.getElementById('status-filter').value;
+    let allUsers = [];
 
-        let url = '/api/accounts/users/list/?';
-        if (search) url += `search=${search}&`;
-        if (role)   url += `role=${role}&`;
-        if (status) {
-            const isActive = status === 'active' ? 'true' : 'false';
-            url += `is_active=${isActive}&`;
-        }
-
-    document.getElementById('users-table-body').innerHTML = `
-        <tr>
-            <td colspan="6" class="text-center text-muted py-4">
-                Loading users...
-            </td>
-        </tr>`;
-
-    const response = await fetch(url, {
-        credentials: 'same-origin',
-    });
-
-    const data = await response.json();
-    const tbody = document.getElementById('users-table-body');
-
-    if (!data.results || data.results.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center text-muted py-4">
-                    No users found.
-                </td>
-            </tr>`;
-        return;
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
     }
-        tbody.innerHTML = data.results.map(user => `
+
+    function buildUserRow(user) {
+        return `
             <tr>
-                <td>${user.full_name}</td>
-                <td>${user.email}</td>
-                <td>${user.employee_id || '-'}</td>
-                <td>${user.department || '-'}</td>
+                <td>${escapeHtml(user.full_name || '-')}</td>
+                <td>${escapeHtml(user.email || '-')}</td>
+                <td>${escapeHtml(user.employee_id || '-')}</td>
+                <td>${escapeHtml(user.department || '-')}</td>
                 <td>
-                    <span class="badge ${getRoleBadge(user.role)}">
-                        ${user.role}
-                    </span>
+                    <span class="badge ${getRoleBadge(user.role)}">${escapeHtml(user.role || '-')}</span>
                 </td>
                 <td>
                     <span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'}">
@@ -178,7 +150,53 @@
                     </span>
                 </td>
             </tr>
-        `).join('');
+        `;
+    }
+
+    function renderUsers() {
+        const search = (document.getElementById('search-input').value || '').toLowerCase().trim();
+        const role   = document.getElementById('role-filter').value;
+        const status = document.getElementById('status-filter').value;
+        const tbody  = document.getElementById('users-table-body');
+
+        const filtered = (allUsers || []).filter(user => {
+            if (role && user.role !== role) return false;
+            if (status === 'active'   && !user.is_active) return false;
+            if (status === 'inactive' &&  user.is_active) return false;
+            if (search) {
+                const haystack = [
+                    user.full_name  || '',
+                    user.email      || '',
+                    user.employee_id|| '',
+                    user.department || '',
+                    user.role       || '',
+                ].join(' ').toLowerCase();
+                if (!haystack.includes(search)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No users match your search.
+                    </td>
+                </tr>`;
+            return;
+        }
+        tbody.innerHTML = filtered.map(buildUserRow).join('');
+    }
+
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/accounts/users/list/', { credentials: 'same-origin' });
+            const data = await response.json();
+            allUsers = data.results || [];
+            renderUsers();
+        } catch (err) {
+            console.error('Error loading users:', err);
+        }
     }
 
     function getRoleBadge(role) {
@@ -248,6 +266,11 @@
         }
         return cookieValue;
     }
+
+    // Live search + filters
+    document.getElementById('search-input').addEventListener('input', renderUsers);
+    document.getElementById('role-filter').addEventListener('change', renderUsers);
+    document.getElementById('status-filter').addEventListener('change', renderUsers);
 
     loadUsers();
 </script>

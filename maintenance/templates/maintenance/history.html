@@ -44,21 +44,23 @@
 
 <!-- Filters -->
 <div class="card shadow-sm border-0 p-3 mb-4">
-    <div class="row g-2">
-        <div class="col-md-4">
-            <input type="text" id="search-input" class="form-control" placeholder="Search asset name...">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" class="form-control" placeholder="Search by asset, technician, or remarks...">
+            </div>
         </div>
         <div class="col-md-3">
-            <input type="date" id="date-from" class="form-control" placeholder="From">
+            <input type="date" id="date-from" class="form-control" title="From date">
         </div>
         <div class="col-md-3">
-            <input type="date" id="date-to" class="form-control" placeholder="To">
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-secondary w-100" onclick="loadHistory()"><i class="bi bi-search"></i> Filter</button>
+            <input type="date" id="date-to" class="form-control" title="To date">
         </div>
     </div>
 </div>
++++++++ REPLACE]<]minimax[>[</div>]<]minimax[>[<task_progress>]<]minimax[>[<item>]<]minimax[>[<status>in_progress]<]minimax[>[</status>]<]minimax[>[<content>Update history.html with live event listener search/filter pattern]<]minimax[>[</content>]<]minimax[>[</item>]<]minimax[>[<item>]<]minimax[>[<status>pending]<]minimax[>[</status>]<]minimax[>[<content>Update assets.html with live event listener search/filter pattern]<]minimax[>[</content>]<]minimax[>[</item>]<]minimax[>[<item>]<]minimax[>[<status>pending]<]minimax[>[</status>]<]minimax[>[<content>Update users.html with live event listener search/filter pattern]<]minimax[>[</content>]<]minimax[>[</item>]<]minimax[>[<item>]<]minimax[>[<status>pending]<]minimax[>[</status>]<]minimax[>[<content>Update logs.html with live event listener search/filter pattern]<]minimax[>[</content>]<]minimax[>[</item>]<]minimax[>[</task_progress>]<]minimax[>[</invoke>
+]<]minimax[>[</tool_call>
 
 <!-- History Table -->
 <div class="card shadow-sm border-0">
@@ -111,61 +113,94 @@
 
 {% block scripts %}
 <script>
-    async function loadHistory() {
-        const searchInput = document.getElementById('search-input').value;
-        const dateFrom = document.getElementById('date-from').value;
-        const dateTo = document.getElementById('date-to').value;
+    let allHistory = [];
 
-        let url = '/api/maintenance/history/?';
-        if (searchInput) url += `search=${searchInput}&`;
-        if (dateFrom) url += `date_from=${dateFrom}&`;
-        if (dateTo) url += `date_to=${dateTo}&`;
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
 
-        const response = await fetch(url, {
-            credentials: 'same-origin',
+    function truncate(text, max) {
+        if (!text) return '';
+        const safe = String(text);
+        return safe.length > max ? safe.substring(0, max) + '…' : safe;
+    }
+
+    function buildHistoryRow(h) {
+        const date = h.timestamp ? h.timestamp.substring(0, 10) : '-';
+        const costCell = {% if request.user.is_manager %}
+            `<td class="text-end pe-3">
+                <span class="cost-badge">₱${Number(h.maintenance_cost || 0).toLocaleString('en-PH', {maximumFractionDigits: 2})}</span>
+            </td>`{% else %}''{% endif %};
+        return `
+            <tr>
+                <td class="ps-3"><strong><i class="bi bi-box2"></i> ${escapeHtml(h.asset || '-')}</strong></td>
+                <td><small class="badge bg-light text-dark">WO-${escapeHtml(String(h.work_order || '-'))}</small></td>
+                <td><small class="text-muted">${escapeHtml(h.completed_by || '-')}</small></td>
+                <td><small class="text-muted">${escapeHtml(date)}</small></td>
+                <td><small>${escapeHtml(truncate(h.remarks, 40))}</small></td>
+                ${costCell}
+            </tr>
+        `;
+    }
+
+    function renderHistory() {
+        const search  = (document.getElementById('search-input').value || '').toLowerCase().trim();
+        const from    = document.getElementById('date-from').value;
+        const to      = document.getElementById('date-to').value;
+        const tbody   = document.getElementById('history-table-body');
+
+        const filtered = (allHistory || []).filter(h => {
+            if (search) {
+                const haystack = [
+                    h.asset || '',
+                    h.completed_by || '',
+                    h.remarks || '',
+                    'WO-' + (h.work_order || ''),
+                ].join(' ').toLowerCase();
+                if (!haystack.includes(search)) return false;
+            }
+            if (from && h.timestamp && h.timestamp.substring(0, 10) < from) return false;
+            if (to   && h.timestamp && h.timestamp.substring(0, 10) > to)   return false;
+            return true;
         });
 
-        const data = await response.json();
-        const tbody = document.getElementById('history-table-body');
+        // Recompute totals from the filtered view (so KPIs match the table)
+        const totalCost = filtered.reduce((sum, h) => sum + (parseFloat(h.maintenance_cost) || 0), 0);
+        if (document.getElementById('total-cost')) {
+            document.getElementById('total-cost').textContent = '₱' + Number(totalCost).toLocaleString('en-PH', {maximumFractionDigits: 0});
+            document.getElementById('total-count').textContent = filtered.length;
+        }
 
-        if (!data.results || data.results.length === 0) {
+        if (filtered.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center text-muted py-5">
                         <i class="bi bi-inbox"></i> No maintenance history found.
                     </td>
                 </tr>`;
-            document.getElementById('total-cost').textContent = '₱0';
-            document.getElementById('total-count').textContent = '0';
             return;
         }
-
-        // Calculate totals
-        let totalCost = 0;
-        data.results.forEach(h => {
-            totalCost += parseFloat(h.maintenance_cost) || 0;
-        });
-
-        if (document.getElementById('total-cost')) {
-            document.getElementById('total-cost').textContent = '₱' + Number(totalCost).toLocaleString('en-PH', {maximumFractionDigits: 0});
-            document.getElementById('total-count').textContent = data.results.length;
-        }
-
-        tbody.innerHTML = data.results.map(h => `
-            <tr>
-                <td class="ps-3"><strong><i class="bi bi-box2"></i> ${h.asset || '-'}</strong></td>
-                <td><small class="badge bg-light text-dark">WO-${h.work_order || '-'}</small></td>
-                <td><small class="text-muted">${h.completed_by || '-'}</small></td>
-                <td><small class="text-muted">${h.timestamp ? h.timestamp.substring(0,10) : '-'}</small></td>
-                <td><small>${h.remarks ? (h.remarks.substring(0, 40) + (h.remarks.length > 40 ? '...' : '')) : '—'}</small></td>
-                {% if request.user.is_manager %}
-                <td class="text-end pe-3">
-                    <span class="cost-badge">₱${Number(h.maintenance_cost).toLocaleString('en-PH', {maximumFractionDigits: 2})}</span>
-                </td>
-                {% endif %}
-            </tr>
-        `).join('');
+        tbody.innerHTML = filtered.map(buildHistoryRow).join('');
     }
+
+    async function loadHistory() {
+        try {
+            const response = await fetch('/api/maintenance/history/?', { credentials: 'same-origin' });
+            const data = await response.json();
+            allHistory = data.results || [];
+            renderHistory();
+        } catch (err) {
+            console.error('Error loading history:', err);
+        }
+    }
+
+    // Live search + date filters
+    document.getElementById('search-input').addEventListener('input', renderHistory);
+    document.getElementById('date-from').addEventListener('change', renderHistory);
+    document.getElementById('date-to').addEventListener('change', renderHistory);
 
     loadHistory();
 </script>

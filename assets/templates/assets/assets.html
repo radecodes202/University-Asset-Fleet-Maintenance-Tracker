@@ -25,9 +25,12 @@
 </div>
 
 <div class="card shadow-sm border-0 p-3 mb-4">
-    <div class="row g-2">
-        <div class="col-md-4">
-            <input type="text" id="search-input" class="form-control" placeholder="Search asset name...">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-5">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" class="form-control" placeholder="Search by name, category, or serial...">
+            </div>
         </div>
         <div class="col-md-3">
             <select id="status-filter" class="form-select">
@@ -37,13 +40,10 @@
                 <option value="RETIRED">Retired</option>
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <select id="category-filter" class="form-select">
                 <option value="">All Categories</option>
             </select>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-secondary w-100" onclick="loadAssets()">Filter</button>
         </div>
     </div>
 </div>
@@ -135,49 +135,65 @@
         return div.innerHTML;
     }
 
-    async function loadAssets() {
-        const search   = document.getElementById('search-input').value;
+    let allAssets = [];
+
+    function buildAssetRow(asset) {
+        const cost = Number(asset.purchase_cost || 0).toLocaleString('en-PH', {maximumFractionDigits: 0});
+        const imageCell = asset.asset_image
+            ? '<img src="' + escapeHtml(asset.asset_image) + '" class="asset-image">'
+            : '<span class="text-muted small"><i class="bi bi-image"></i> No image</span>';
+        const costCell = IS_MANAGER
+            ? '<td class="text-end pe-3 cost-col"><span class="badge bg-light text-dark">₱' + cost + '</span></td>'
+            : '';
+        return '<tr>' +
+            '<td class="ps-3">' + imageCell + '</td>' +
+            '<td><strong><i class="bi bi-box2"></i> ' + escapeHtml(asset.asset_name) + '</strong></td>' +
+            '<td><small class="text-muted">' + escapeHtml(asset.category ? asset.category.name : '-') + '</small></td>' +
+            '<td><small class="text-muted">' + escapeHtml(asset.serial_number || '-') + '</small></td>' +
+            '<td><span class="status-badge ' + getStatusClass(asset.current_status) + '">' + getStatusIcon(asset.current_status) + ' ' + escapeHtml((asset.current_status || '').replace(/_/g, ' ')) + '</span></td>' +
+            costCell +
+            '</tr>';
+    }
+
+    function renderAssets() {
+        const search   = (document.getElementById('search-input').value || '').toLowerCase().trim();
         const status   = document.getElementById('status-filter').value;
         const category = document.getElementById('category-filter').value;
+        const tbody    = document.getElementById('assets-table-body');
+        const colspan  = IS_MANAGER ? 6 : 5;
 
-        let url = '/api/assets/?';
-        if (search)   url += 'search=' + encodeURIComponent(search) + '&';
-        if (status)   url += 'status=' + status + '&';
-        if (category) url += 'category=' + encodeURIComponent(category) + '&';
+        const filtered = (allAssets || []).filter(asset => {
+            if (status && asset.current_status !== status) return false;
+            if (category && (!asset.category || asset.category.name !== category)) return false;
+            if (search) {
+                const haystack = [
+                    asset.asset_name || '',
+                    asset.category ? asset.category.name : '',
+                    asset.serial_number || '',
+                ].join(' ').toLowerCase();
+                if (!haystack.includes(search)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="text-center text-muted py-4"><i class="bi bi-inbox"></i> No assets match your search.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = filtered.map(buildAssetRow).join('');
+    }
+
+    async function loadAssets() {
+        // Show/hide cost column header
+        document.querySelectorAll('.cost-col').forEach(el => {
+            el.style.display = IS_MANAGER ? '' : 'none';
+        });
 
         try {
-            const response = await fetch(url, { credentials: 'same-origin' });
+            const response = await fetch('/api/assets/?', { credentials: 'same-origin' });
             const data = await response.json();
-            const tbody = document.getElementById('assets-table-body');
-
-            // Show/hide cost column header
-            document.querySelectorAll('.cost-col').forEach(el => {
-                el.style.display = IS_MANAGER ? '' : 'none';
-            });
-
-            if (!data.results || data.results.length === 0) {
-                const colspan = IS_MANAGER ? 6 : 5;
-                tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="text-center text-muted py-4"><i class="bi bi-inbox"></i> No assets found.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = data.results.map(asset => {
-                const cost = Number(asset.purchase_cost || 0).toLocaleString('en-PH', {maximumFractionDigits: 0});
-                const imageCell = asset.asset_image
-                    ? '<img src="' + escapeHtml(asset.asset_image) + '" class="asset-image">'
-                    : '<span class="text-muted small"><i class="bi bi-image"></i> No image</span>';
-                const costCell = IS_MANAGER
-                    ? '<td class="text-end pe-3 cost-col"><span class="badge bg-light text-dark">₱' + cost + '</span></td>'
-                    : '';
-                return '<tr>' +
-                    '<td class="ps-3">' + imageCell + '</td>' +
-                    '<td><strong><i class="bi bi-box2"></i> ' + escapeHtml(asset.asset_name) + '</strong></td>' +
-                    '<td><small class="text-muted">' + escapeHtml(asset.category ? asset.category.name : '-') + '</small></td>' +
-                    '<td><small class="text-muted">' + escapeHtml(asset.serial_number || '-') + '</small></td>' +
-                    '<td><span class="status-badge ' + getStatusClass(asset.current_status) + '">' + getStatusIcon(asset.current_status) + ' ' + escapeHtml((asset.current_status || '').replace(/_/g, ' ')) + '</span></td>' +
-                    costCell +
-                    '</tr>';
-            }).join('');
+            allAssets = data.results || [];
+            renderAssets();
         } catch (err) {
             console.error('Error loading assets:', err);
         }
@@ -213,6 +229,11 @@
             }
         } catch (err) { console.error('Error refreshing categories:', err); }
     }
+
+    // Live search + filters
+    document.getElementById('search-input').addEventListener('input', renderAssets);
+    document.getElementById('status-filter').addEventListener('change', renderAssets);
+    document.getElementById('category-filter').addEventListener('change', renderAssets);
 
     loadCategories();
     loadAssets();
