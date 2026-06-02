@@ -150,3 +150,7 @@ CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:3000,http://127.0.0.1:3000'
 ).split(',')
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://tranquil-creativity-production-34e1.up.railway.app",
+]
