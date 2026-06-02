@@ -72,6 +72,111 @@
     </div>
 </div>
 
+<!-- ===================== Add Category Modal ===================== -->
+{% if request.user.is_manager %}
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="bi bi-tag"></i> New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+                    <input type="text" id="category-name" class="form-control" placeholder="e.g. Sedan, Laptop, Generator">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Description</label>
+                    <textarea id="category-description" class="form-control" rows="3" placeholder="Optional notes about this category"></textarea>
+                </div>
+                <div id="category-error" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-category-btn">
+                    <i class="bi bi-check2"></i> Save Category
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== Add Asset Modal ===================== -->
+<div class="modal fade" id="addAssetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle"></i> New Asset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label fw-semibold">Asset Name <span class="text-danger">*</span></label>
+                        <input type="text" id="asset-name" class="form-control" placeholder="e.g. Toyota Vios 2024">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Serial Number <span class="text-danger">*</span></label>
+                        <input type="text" id="asset-serial" class="form-control" placeholder="e.g. SN-2024-0001">
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <select id="asset-category" class="form-select">
+                                <option value="">Select a category…</option>
+                            </select>
+                            <button class="btn btn-outline-secondary" type="button"
+                                    data-bs-toggle="modal" data-bs-target="#addCategoryModal"
+                                    onclick="setReturnToAssetModal(true)"
+                                    title="Create a new category">
+                                <i class="bi bi-plus-lg"></i> New
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Purchase Date <span class="text-danger">*</span></label>
+                        <input type="date" id="asset-purchase-date" class="form-control">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Purchase Cost (₱) <span class="text-danger">*</span></label>
+                        <input type="number" id="asset-purchase-cost" class="form-control" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Status</label>
+                        <select id="asset-status" class="form-select">
+                            <option value="ACTIVE">Active</option>
+                            <option value="UNDER_MAINTENANCE">Under Maintenance</option>
+                            <option value="RETIRED">Retired</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Image</label>
+                        <input type="file" id="asset-image" class="form-control" accept="image/*">
+                        <small class="text-muted">Optional. Uploaded to Cloudinary.</small>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Notes</label>
+                        <textarea id="asset-notes" class="form-control" rows="2" placeholder="Optional notes"></textarea>
+                    </div>
+                </div>
+                <div id="asset-error" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-asset-btn">
+                    <i class="bi bi-check2"></i> Save Asset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <style>
     .table tbody tr { border-bottom: 1px solid #e9ecef; transition: background-color 0.2s ease; }
     .table tbody tr:hover { background-color: #f8f9fa; }
@@ -237,5 +342,214 @@
 
     loadCategories();
     loadAssets();
+
+    // ============================================================
+    // Add Category  (POST /api/assets/categories/)
+    // ============================================================
+    async function submitCategory() {
+        const nameEl  = document.getElementById('category-name');
+        const descEl  = document.getElementById('category-description');
+        const errEl   = document.getElementById('category-error');
+        const btn     = document.getElementById('save-category-btn');
+        const name    = (nameEl.value || '').trim();
+
+        if (!name) {
+            errEl.textContent = 'Category name is required.';
+            errEl.classList.remove('d-none');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving…';
+        errEl.classList.add('d-none');
+
+        try {
+            const response = await fetch('/api/assets/categories/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    name: name,
+                    description: (descEl.value || '').trim(),
+                }),
+            });
+
+            if (response.ok) {
+                const newCat = await response.json();
+                showSuccess('Category added successfully.');
+
+                // Reset & close
+                nameEl.value = '';
+                descEl.value = '';
+                bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+
+                // Refresh every dropdown that lists categories
+                await refreshCategoryDropdowns();
+
+                // If we opened this from inside the Add Asset modal, drop back
+                // and pre-select the new category.
+                if (returnToAssetModal && newCat && newCat.id) {
+                    newlyCreatedCategoryId = newCat.id;
+                    returnToAssetModal = false;
+                    // Re-populate the asset modal's category dropdown
+                    await populateAssetCategoryDropdown();
+                    const assetSelect = document.getElementById('asset-category');
+                    if (assetSelect) assetSelect.value = newCat.id;
+                    // Reopen the asset modal
+                    const assetModal = new bootstrap.Modal(document.getElementById('addAssetModal'));
+                    assetModal.show();
+                }
+            } else {
+                const err = await response.json().catch(() => ({}));
+                errEl.textContent = JSON.stringify(err);
+                errEl.classList.remove('d-none');
+            }
+        } catch (err) {
+            errEl.textContent = 'Network error: ' + err.message;
+            errEl.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2"></i> Save Category';
+        }
+    }
+
+    // ============================================================
+    // Add Asset  (POST /api/assets/)
+    // ============================================================
+    async function populateAssetCategoryDropdown() {
+        const select = document.getElementById('asset-category');
+        if (!select) return;
+        try {
+            const response = await fetch('/api/assets/categories/', { credentials: 'same-origin' });
+            const data = await response.json();
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select a category…</option>';
+            if (data.results) {
+                data.results.forEach(cat => {
+                    select.innerHTML += '<option value="' + escapeHtml(cat.id) + '">' + escapeHtml(cat.name) + '</option>';
+                });
+            }
+            if (currentValue) select.value = currentValue;
+        } catch (err) {
+            console.error('Error populating asset category dropdown:', err);
+        }
+    }
+
+    async function submitAsset() {
+        const nameEl      = document.getElementById('asset-name');
+        const serialEl    = document.getElementById('asset-serial');
+        const categoryEl  = document.getElementById('asset-category');
+        const dateEl      = document.getElementById('asset-purchase-date');
+        const costEl      = document.getElementById('asset-purchase-cost');
+        const statusEl    = document.getElementById('asset-status');
+        const imageEl     = document.getElementById('asset-image');
+        const notesEl     = document.getElementById('asset-notes');
+        const errEl       = document.getElementById('asset-error');
+        const btn         = document.getElementById('save-asset-btn');
+
+        const name     = (nameEl.value || '').trim();
+        const serial   = (serialEl.value || '').trim();
+        const category = categoryEl.value;
+        const date     = dateEl.value;
+        const cost     = costEl.value;
+        const status   = statusEl.value;
+
+        if (!name || !serial || !category || !date || !cost) {
+            errEl.textContent = 'Please fill in all required fields (name, serial, category, purchase date, cost).';
+            errEl.classList.remove('d-none');
+            return;
+        }
+
+        // If an image was chosen, we have to use FormData (multipart/form-data).
+        // Otherwise we can use a simple JSON body.
+        let body, headers;
+        if (imageEl.files && imageEl.files[0]) {
+            const fd = new FormData();
+            fd.append('asset_name', name);
+            fd.append('serial_number', serial);
+            fd.append('category_id', category);
+            fd.append('purchase_date', date);
+            fd.append('purchase_cost', cost);
+            fd.append('current_status', status);
+            if ((notesEl.value || '').trim()) fd.append('notes', notesEl.value.trim());
+            fd.append('asset_image', imageEl.files[0]);
+            body = fd;
+            headers = { 'X-CSRFToken': getCookie('csrftoken') };  // let browser set Content-Type
+        } else {
+            body = JSON.stringify({
+                asset_name: name,
+                serial_number: serial,
+                category_id: parseInt(category, 10),
+                purchase_date: date,
+                purchase_cost: cost,
+                current_status: status,
+                notes: (notesEl.value || '').trim() || null,
+            });
+            headers = {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            };
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving…';
+        errEl.classList.add('d-none');
+
+        try {
+            const response = await fetch('/api/assets/', {
+                method: 'POST',
+                headers: headers,
+                credentials: 'same-origin',
+                body: body,
+            });
+
+            if (response.ok) {
+                showSuccess('Asset added successfully.');
+
+                // Reset & close
+                nameEl.value = '';
+                serialEl.value = '';
+                categoryEl.value = '';
+                dateEl.value = '';
+                costEl.value = '';
+                statusEl.value = 'ACTIVE';
+                imageEl.value = '';
+                notesEl.value = '';
+                bootstrap.Modal.getInstance(document.getElementById('addAssetModal')).hide();
+
+                // Reload the table
+                await loadAssets();
+            } else {
+                const err = await response.json().catch(() => ({}));
+                errEl.textContent = Object.values(err).flat().join(' ') || 'Failed to save asset.';
+                errEl.classList.remove('d-none');
+            }
+        } catch (err) {
+            errEl.textContent = 'Network error: ' + err.message;
+            errEl.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2"></i> Save Asset';
+        }
+    }
+
+    // Wire up the Save buttons once the DOM is ready
+    document.addEventListener('DOMContentLoaded', function () {
+        const catBtn  = document.getElementById('save-category-btn');
+        const assetBtn = document.getElementById('save-asset-btn');
+        if (catBtn)   catBtn.addEventListener('click', submitCategory);
+        if (assetBtn) assetBtn.addEventListener('click', submitAsset);
+
+        // Pre-populate the asset modal's category dropdown every time it opens
+        const addAssetModalEl = document.getElementById('addAssetModal');
+        if (addAssetModalEl) {
+            addAssetModalEl.addEventListener('show.bs.modal', function () {
+                populateAssetCategoryDropdown();
+            });
+        }
+    });
 </script>
 {% endblock %}
