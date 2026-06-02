@@ -10,9 +10,14 @@
         <p class="text-muted small">Manage university assets and equipment</p>
     </div>
     {% if request.user.is_manager %}
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssetModal">
-        + Add Asset
-    </button>
+    <div>
+        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addAssetModal">
+            + Add Asset
+        </button>
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+            + Category
+        </button>
+    </div>
     {% endif %}
 </div>
 
@@ -85,9 +90,14 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Category</label>
-                    <select id="asset-category" class="form-select">
-                        <option value="">Select category...</option>
-                    </select>
+                    <div class="input-group">
+                        <select id="asset-category" class="form-select">
+                            <option value="">Select category...</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#addCategoryModal" onclick="setReturnToAssetModal(true)">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Serial Number</label>
@@ -110,6 +120,33 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" onclick="addAsset()">Add Asset</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
+                    <input type="text" id="category-name" class="form-control" placeholder="e.g. Vehicles">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Description</label>
+                    <textarea id="category-description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
+                </div>
+                <div id="category-error" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addCategory()">Create Category</button>
             </div>
         </div>
     </div>
@@ -264,6 +301,145 @@
         }
         return cookieValue;
     }
+
+    // Variable to track if we should return to asset modal after category creation
+    let returnToAssetModal = false;
+    let newlyCreatedCategoryId = null;
+
+    function setReturnToAssetModal(value) {
+        returnToAssetModal = value;
+    }
+
+    async function refreshCategoryDropdowns() {
+        const response = await fetch('/api/assets/categories/', {
+            credentials: 'same-origin',
+        });
+        const data = await response.json();
+        
+        // Refresh category filter dropdown
+        const filterSelect = document.getElementById('category-filter');
+        if (filterSelect) {
+            const currentValue = filterSelect.value;
+            filterSelect.innerHTML = '<option value="">All Categories</option>';
+            if (data.results) {
+                data.results.forEach(cat => {
+                    filterSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+                });
+            }
+            filterSelect.value = currentValue;
+        }
+        
+        // Refresh asset category dropdown in modal
+        const assetSelect = document.getElementById('asset-category');
+        if (assetSelect) {
+            const currentValue = assetSelect.value;
+            assetSelect.innerHTML = '<option value="">Select category...</option>';
+            if (data.results) {
+                data.results.forEach(cat => {
+                    assetSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+                });
+            }
+            // If a new category was just created, select it
+            if (newlyCreatedCategoryId) {
+                assetSelect.value = newlyCreatedCategoryId;
+                newlyCreatedCategoryId = null;
+            } else {
+                assetSelect.value = currentValue;
+            }
+        }
+    }
+
+    async function addCategory() {
+        const name = document.getElementById('category-name').value.trim();
+        const description = document.getElementById('category-description').value.trim();
+        const errDiv = document.getElementById('category-error');
+
+        if (!name) {
+            errDiv.textContent = 'Category name is required.';
+            errDiv.classList.remove('d-none');
+            return;
+        }
+
+        const response = await fetch('/api/assets/categories/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                name: name,
+                description: description
+            }),
+        });
+
+        if (response.ok) {
+            const newCategory = await response.json();
+            newlyCreatedCategoryId = newCategory.id;
+            
+            // Close the category modal
+            const categoryModal = bootstrap.Modal.getInstance(
+                document.getElementById('addCategoryModal')
+            );
+            if (categoryModal) {
+                categoryModal.hide();
+            }
+            
+            // Clear form
+            document.getElementById('category-name').value = '';
+            document.getElementById('category-description').value = '';
+            errDiv.classList.add('d-none');
+            
+            // Refresh category dropdowns
+            await refreshCategoryDropdowns();
+            
+            // Show success feedback
+            showSuccessMessage('Category created successfully!');
+            
+            // If opened from asset modal, reopen asset modal
+            if (returnToAssetModal) {
+                setTimeout(() => {
+                    const assetModal = new bootstrap.Modal(document.getElementById('addAssetModal'));
+                    assetModal.show();
+                    returnToAssetModal = false;
+                }, 300);
+            }
+        } else {
+            const err = await response.json();
+            if (err.name) {
+                errDiv.textContent = Array.isArray(err.name) ? err.name.join(', ') : err.name;
+            } else {
+                errDiv.textContent = JSON.stringify(err);
+            }
+            errDiv.classList.remove('d-none');
+        }
+    }
+
+    function showSuccessMessage(message) {
+        // Create a temporary success alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+        alertDiv.style.zIndex = '9999';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alertDiv);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 3000);
+    }
+
+    // Clear category modal error when it's closed
+    document.getElementById('addCategoryModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('category-error').classList.add('d-none');
+        if (!returnToAssetModal) {
+            document.getElementById('category-name').value = '';
+            document.getElementById('category-description').value = '';
+        }
+    });
 
     loadCategories();
     loadAssets();

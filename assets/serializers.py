@@ -5,8 +5,7 @@ class AssetCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetCategory 
-        fields = ['id',
-                  'name']
+        fields = ['id', 'name', 'description']
 
 class StaffAssetSerializer(serializers.ModelSerializer):
     category    = AssetCategorySerializer(read_only=True)

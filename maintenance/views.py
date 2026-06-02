@@ -204,6 +204,12 @@ class WorkOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
                     completed_by     = request.user,
                 )
 
+                # Mark the related maintenance request as completed too
+                maintenance_request = instance.maintenance_request
+                if maintenance_request.status != MaintenanceRequest.Status.COMPLETED:
+                    maintenance_request.status = MaintenanceRequest.Status.COMPLETED
+                    maintenance_request.save()
+
         serializer.save()
 
          # LOGGING STATUS CHANGE

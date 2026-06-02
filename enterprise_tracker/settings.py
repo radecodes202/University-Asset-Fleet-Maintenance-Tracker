@@ -17,7 +17,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="127.0.0.1,localhost"
+    default="127.0.0.1:8000,localhost"
 ).split(",")
 
 # Application definition
@@ -157,7 +157,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS — update with your Railway app URL after deployment
+# CORS — update with your Render app URL after deployment
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in config(
