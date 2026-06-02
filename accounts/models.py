@@ -100,3 +100,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_read_only(self):
         return self.role == Role.AUDITOR
 
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+if not User.objects.filter(email="admin@gmail.com").exists():
+    User.objects.create_superuser(
+        email="admin@gmail.com",
+        first_name="Admin",
+        last_name="User",
+        password="Admin123456!"
+    )
