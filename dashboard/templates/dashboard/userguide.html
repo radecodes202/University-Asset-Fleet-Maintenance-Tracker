@@ -1,0 +1,1065 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}User Guide | FleetTrack{% endblock %}
+
+{% block content %}
+
+<style>
+    .guide-hero {
+        background: linear-gradient(135deg, #0d6efd 0%, #084298 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .guide-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+    }
+
+    .guide-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -5%;
+        width: 250px;
+        height: 250px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+    }
+
+    .guide-hero h1,
+    .guide-hero p {
+        position: relative;
+        z-index: 1;
+    }
+
+    .toc-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .toc-card a {
+        color: #495057;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .toc-card a:hover {
+        background: #f1f5ff;
+        color: #0d6efd;
+        transform: translateX(4px);
+    }
+
+    .toc-card a i {
+        margin-right: 0.5rem;
+        color: #0d6efd;
+    }
+
+    .role-card {
+        border: none;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .role-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .role-card .card-header {
+        border: none;
+        font-weight: 700;
+        color: white;
+        padding: 1.25rem;
+    }
+
+    .role-staff .card-header { background: linear-gradient(135deg, #6c757d, #495057); }
+    .role-manager .card-header { background: linear-gradient(135deg, #0d6efd, #084298); }
+    .role-auditor .card-header { background: linear-gradient(135deg, #198754, #146c43); }
+
+    .role-card ul li {
+        padding: 0.35rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .role-card ul li:last-child {
+        border-bottom: none;
+    }
+
+    .flow-container {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        overflow-x: auto;
+    }
+
+    .flow-diagram {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        min-width: 900px;
+    }
+
+    .flow-step {
+        flex: 1;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1.25rem 1rem;
+        text-align: center;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .flow-step:hover {
+        border-color: #0d6efd;
+        transform: scale(1.03);
+    }
+
+    .flow-step .step-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 0.75rem;
+        color: white;
+    }
+
+    .flow-step:nth-child(1) .step-icon { background: #6c757d; }
+    .flow-step:nth-child(3) .step-icon { background: #fd7e14; }
+    .flow-step:nth-child(5) .step-icon { background: #0d6efd; }
+    .flow-step:nth-child(7) .step-icon { background: #6f42c1; }
+    .flow-step:nth-child(9) .step-icon { background: #198754; }
+
+    .flow-step .step-num {
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        width: 28px;
+        height: 28px;
+        background: #0d6efd;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .flow-step h6 {
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+        color: #212529;
+    }
+
+    .flow-step small {
+        color: #6c757d;
+        font-size: 0.75rem;
+    }
+
+    .flow-arrow {
+        color: #0d6efd;
+        font-size: 1.5rem;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .step-guide {
+        background: white;
+        border-left: 4px solid #0d6efd;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .step-guide .step-title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .step-guide .step-title .num {
+        width: 32px;
+        height: 32px;
+        background: #0d6efd;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .step-guide h5 {
+        margin: 0;
+        font-weight: 700;
+        color: #212529;
+    }
+
+    .status-pill {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin: 0 0.2rem;
+    }
+
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d4edda; color: #155724; }
+    .status-rejected { background: #f8d7da; color: #721c24; }
+    .status-completed { background: #d1ecf1; color: #0c5460; }
+    .status-open { background: #cce5ff; color: #004085; }
+    .status-progress { background: #fff3cd; color: #856404; }
+    .status-cancelled { background: #e2e3e5; color: #6c757d; }
+
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #0d6efd;
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+    }
+
+    .warning-box {
+        background: #fff8e1;
+        border-left: 4px solid #ffc107;
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+    }
+
+    .tip-box {
+        background: #e8f5e9;
+        border-left: 4px solid #198754;
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+    }
+
+    .tip-box i, .warning-box i, .info-box i {
+        margin-right: 0.5rem;
+    }
+
+    .faq-item {
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .faq-question {
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        color: #212529;
+        background: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        transition: background 0.2s ease;
+    }
+
+    .faq-question:hover {
+        background: #f8f9fa;
+    }
+
+    .faq-question .toggle-icon {
+        transition: transform 0.3s ease;
+        color: #0d6efd;
+    }
+
+    .faq-item.active .toggle-icon {
+        transform: rotate(180deg);
+    }
+
+    .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease, padding 0.3s ease;
+        padding: 0 1.25rem;
+        color: #495057;
+        line-height: 1.6;
+    }
+
+    .faq-item.active .faq-answer {
+        max-height: 500px;
+        padding: 0 1.25rem 1.25rem 1.25rem;
+    }
+
+    .quick-link-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.25rem;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        border-left: 4px solid;
+    }
+
+    .quick-link-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+        color: inherit;
+    }
+
+    .quick-link-card .icon-circle {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        margin-bottom: 0.75rem;
+    }
+
+    .section-anchor {
+        scroll-margin-top: 2rem;
+    }
+
+    .glossary-term {
+        font-weight: 700;
+        color: #0d6efd;
+    }
+</style>
+
+<!-- Hero Section -->
+<div class="guide-hero">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <h1 class="fw-bold mb-2"><i class="bi bi-book-half"></i> FleetTrack User Guide</h1>
+            <p class="lead mb-0 opacity-75">
+                Your complete reference for managing university assets, maintenance requests, and work orders.
+            </p>
+        </div>
+        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+            <span class="badge bg-light text-dark fs-6 me-2"><i class="bi bi-clock"></i> v1.0</span>
+            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-shield-check"></i> All Roles</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Sidebar TOC -->
+    <div class="col-lg-3">
+        <div class="toc-card sticky-top" style="top: 2rem; z-index: 10;">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3">
+                <i class="bi bi-list-ul"></i> Contents
+            </h6>
+            <nav class="d-flex flex-column gap-1">
+                <a href="#overview"><i class="bi bi-info-circle"></i> Overview</a>
+                <a href="#roles"><i class="bi bi-people"></i> User Roles</a>
+                <a href="#flow"><i class="bi bi-diagram-3"></i> System Flow</a>
+                <a href="#modules"><i class="bi bi-grid-3x3-gap"></i> Modules</a>
+                <a href="#staff-guide"><i class="bi bi-person"></i> Staff Guide</a>
+                <a href="#manager-guide"><i class="bi bi-person-gear"></i> Manager Guide</a>
+                <a href="#auditor-guide"><i class="bi bi-shield-check"></i> Auditor Guide</a>
+                <a href="#statuses"><i class="bi bi-tags"></i> Status Reference</a>
+                <a href="#faq"><i class="bi bi-question-circle"></i> FAQ</a>
+                <a href="#glossary"><i class="bi bi-journal-text"></i> Glossary</a>
+                <a href="#support"><i class="bi bi-life-preserver"></i> Support</a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-9">
+
+        <!-- Overview -->
+        <section id="overview" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-info-circle-fill text-primary"></i> 1. System Overview</h3>
+            <p class="text-muted">
+                <strong>FleetTrack</strong> is a centralized asset and fleet maintenance management system built for
+                the university. It tracks the full lifecycle of every asset — from registration, to maintenance
+                requests, to completed repairs — with a clear audit trail for accountability and transparency.
+            </p>
+
+            <div class="row g-3 mt-2">
+                <div class="col-md-4">
+                    <a href="{% url 'dashboard' %}" class="quick-link-card" style="border-left-color: #0d6efd;">
+                        <div class="icon-circle" style="background: #0d6efd;">
+                            <i class="bi bi-speedometer2"></i>
+                        </div>
+                        <h6 class="fw-bold mb-1">Dashboard</h6>
+                        <small class="text-muted">KPIs, totals, and recent activity at a glance.</small>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'assets' %}" class="quick-link-card" style="border-left-color: #198754;">
+                        <div class="icon-circle" style="background: #198754;">
+                            <i class="bi bi-box2"></i>
+                        </div>
+                        <h6 class="fw-bold mb-1">Assets</h6>
+                        <small class="text-muted">Browse all registered vehicles & equipment.</small>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'maintenance:requests' %}" class="quick-link-card" style="border-left-color: #fd7e14;">
+                        <div class="icon-circle" style="background: #fd7e14;">
+                            <i class="bi bi-wrench"></i>
+                        </div>
+                        <h6 class="fw-bold mb-1">Maintenance</h6>
+                        <small class="text-muted">Submit and track repair requests.</small>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Roles -->
+        <section id="roles" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-people-fill text-primary"></i> 2. User Roles & Permissions</h3>
+            <p class="text-muted">
+                FleetTrack has three user roles. The system shows or hides navigation items based on your role.
+            </p>
+
+            <div class="row g-3 mt-2">
+                <!-- Staff -->
+                <div class="col-md-4">
+                    <div class="card role-card role-staff shadow-sm">
+                        <div class="card-header">
+                            <i class="bi bi-person"></i> Standard Staff
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">Default role for university employees.</p>
+                            <ul class="list-unstyled small mb-0">
+                                <li><i class="bi bi-check2 text-success"></i> View assets</li>
+                                <li><i class="bi bi-check2 text-success"></i> Submit maintenance requests</li>
+                                <li><i class="bi bi-check2 text-success"></i> Track own request status</li>
+                                <li><i class="bi bi-x text-danger"></i> Approve / reject requests</li>
+                                <li><i class="bi bi-x text-danger"></i> View costs or audit logs</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manager -->
+                <div class="col-md-4">
+                    <div class="card role-card role-manager shadow-sm">
+                        <div class="card-header">
+                            <i class="bi bi-person-gear"></i> Motorpool Manager
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">Administers the whole system.</p>
+                            <ul class="list-unstyled small mb-0">
+                                <li><i class="bi bi-check2 text-success"></i> Everything Staff can do</li>
+                                <li><i class="bi bi-check2 text-success"></i> Approve / reject requests</li>
+                                <li><i class="bi bi-check2 text-success"></i> Create & assign work orders</li>
+                                <li><i class="bi bi-check2 text-success"></i> Record completed maintenance</li>
+                                <li><i class="bi bi-check2 text-success"></i> Manage users & assets</li>
+                                <li><i class="bi bi-check2 text-success"></i> View costs & audit logs</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auditor -->
+                <div class="col-md-4">
+                    <div class="card role-card role-auditor shadow-sm">
+                        <div class="card-header">
+                            <i class="bi bi-shield-check"></i> Auditor
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">Read-only oversight.</p>
+                            <ul class="list-unstyled small mb-0">
+                                <li><i class="bi bi-check2 text-success"></i> View assets</li>
+                                <li><i class="bi bi-check2 text-success"></i> View all requests & history</li>
+                                <li><i class="bi bi-check2 text-success"></i> View audit logs</li>
+                                <li><i class="bi bi-check2 text-success"></i> Export reports (CSV)</li>
+                                <li><i class="bi bi-x text-danger"></i> Create or edit anything</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- System Flow -->
+        <section id="flow" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-diagram-3-fill text-primary"></i> 3. The End-to-End Process Flow</h3>
+            <p class="text-muted">
+                Every maintenance job follows the same five-stage pipeline, from a staff member spotting a problem
+                to the final entry in maintenance history. The diagram below shows how data moves through the system.
+            </p>
+
+            <div class="flow-container">
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <span class="step-num">1</span>
+                        <div class="step-icon"><i class="bi bi-flag"></i></div>
+                        <h6>Request</h6>
+                        <small>Staff files a maintenance request for an asset.</small>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <span class="step-num">2</span>
+                        <div class="step-icon"><i class="bi bi-check2-square"></i></div>
+                        <h6>Review</h6>
+                        <small>Manager reviews and approves or rejects.</small>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <span class="step-num">3</span>
+                        <div class="step-icon"><i class="bi bi-clipboard-check"></i></div>
+                        <h6>Work Order</h6>
+                        <small>Manager assigns a technician via a work order.</small>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <span class="step-num">4</span>
+                        <div class="step-icon"><i class="bi bi-tools"></i></div>
+                        <h6>Repair</h6>
+                        <small>Technician works on the asset and updates progress.</small>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <span class="step-num">5</span>
+                        <div class="step-icon"><i class="bi bi-archive"></i></div>
+                        <h6>History</h6>
+                        <small>Cost & remarks are saved to permanent history.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <i class="bi bi-lightbulb text-primary"></i>
+                <strong>Why this matters:</strong> the pipeline guarantees that every repair is requested, approved,
+                tracked, and recorded. Nothing is done informally and every step is auditable.
+            </div>
+        </section>
+
+        <!-- Modules -->
+        <section id="modules" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-grid-3x3-gap-fill text-primary"></i> 4. Modules at a Glance</h3>
+            <p class="text-muted">Each sidebar entry corresponds to one functional module.</p>
+
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Module</th>
+                            <th>Purpose</th>
+                            <th>Who can access</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-speedometer2 text-primary"></i> <strong>Dashboard</strong></td>
+                            <td>High-level KPIs, totals, and recent activity.</td>
+                            <td>Everyone</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-box2 text-success"></i> <strong>Assets</strong></td>
+                            <td>Register and view university assets (vehicles, equipment).</td>
+                            <td>Everyone</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-wrench text-warning"></i> <strong>Maintenance Requests</strong></td>
+                            <td>Submit, approve, and track repair requests.</td>
+                            <td>Everyone (Auditors read-only)</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-clipboard-check text-primary"></i> <strong>Work Orders</strong></td>
+                            <td>Create a work order and assign a technician to an approved request.</td>
+                            <td>Manager only</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-clock-history text-secondary"></i> <strong>History</strong></td>
+                            <td>Permanent log of every completed repair, with cost & remarks.</td>
+                            <td>Everyone (cost visible to Manager)</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-people text-info"></i> <strong>Users</strong></td>
+                            <td>Create accounts and assign roles.</td>
+                            <td>Manager only</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-file-earmark-text text-danger"></i> <strong>Audit Logs</strong></td>
+                            <td>Immutable record of every action performed in the system.</td>
+                            <td>Manager & Auditor</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Staff Guide -->
+        <section id="staff-guide" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-person-fill text-primary"></i> 5. Standard Staff Guide</h3>
+            <p class="text-muted">
+                As a staff member your main job is to <strong>flag problems quickly</strong> and <strong>track them until they are fixed</strong>.
+            </p>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">1</div>
+                    <h5>Sign in and open Maintenance</h5>
+                </div>
+                <p class="mb-0">Use your university email and password on the login page. After signing in, click
+                <strong>Maintenance</strong> in the sidebar.</p>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">2</div>
+                    <h5>Submit a new request</h5>
+                </div>
+                <p>Click the <strong>Submit Request</strong> button (top-right). In the modal:</p>
+                <ul>
+                    <li>Pick the <strong>asset</strong> that has a problem from the dropdown.</li>
+                    <li>Describe the <strong>problem</strong> in plain language — what's wrong, when it started, anything you've already tried.</li>
+                    <li>Click <strong>Submit</strong>. The request is created with status
+                        <span class="status-pill status-pending">PENDING</span>.</li>
+                </ul>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">3</div>
+                    <h5>Watch the status change</h5>
+                </div>
+                <p>The same table shows all of your requests and their current status:</p>
+                <ul>
+                    <li><span class="status-pill status-pending">PENDING</span> — waiting on a manager to review.</li>
+                    <li><span class="status-pill status-approved">APPROVED</span> — a manager approved it; a work order will follow.</li>
+                    <li><span class="status-pill status-rejected">REJECTED</span> — a manager declined. Check the manager's notes for the reason.</li>
+                    <li><span class="status-pill status-completed">COMPLETED</span> — repair is finished and recorded in history.</li>
+                </ul>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">4</div>
+                    <h5>Review the history</h5>
+                </div>
+                <p>Open the <strong>History</strong> page to see what was actually done, the technician who did the work,
+                and (for managers) the cost.</p>
+            </div>
+
+            <div class="tip-box">
+                <i class="bi bi-stars text-success"></i>
+                <strong>Tip:</strong> the more specific your problem description, the faster a manager can route it to
+                the right technician.
+            </div>
+        </section>
+
+        <!-- Manager Guide -->
+        <section id="manager-guide" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-person-gear text-primary"></i> 6. Motorpool Manager Guide</h3>
+            <p class="text-muted">
+                As a manager, you are the <strong>gatekeeper</strong> of the maintenance pipeline. You approve requests,
+                assign technicians, and close out the work.
+            </p>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">1</div>
+                    <h5>Triage incoming requests</h5>
+                </div>
+                <p>Open <strong>Maintenance</strong>. Filter by <span class="status-pill status-pending">PENDING</span>
+                to see what needs your attention. For each one, click
+                <span class="badge bg-success"><i class="bi bi-check"></i> Approve</span> or
+                <span class="badge bg-danger"><i class="bi bi-x"></i> Reject</span>.</p>
+                <p>When rejecting, add a short note explaining why — the requester will see it on their end.</p>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">2</div>
+                    <h5>Create a work order for approved requests</h5>
+                </div>
+                <p>Open the <strong>Work Orders</strong> page. Create a new work order that:</p>
+                <ul>
+                    <li>Links to the <strong>approved maintenance request</strong>.</li>
+                    <li>Assigns a <strong>technician</strong> from the staff list.</li>
+                    <li>Includes a clear <strong>work description</strong> (e.g., "Replace front-left tire, rotate others, brake inspection").</li>
+                </ul>
+                <p>Once created, the asset's status automatically changes to
+                <span class="badge bg-warning text-dark">Under Maintenance</span>.</p>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">3</div>
+                    <h5>Track work-in-progress</h5>
+                </div>
+                <p>As the technician works, update the work order's status:</p>
+                <ul>
+                    <li><span class="status-pill status-open">OPEN</span> — created but not yet started.</li>
+                    <li><span class="status-pill status-progress">IN PROGRESS</span> — technician is on the job.</li>
+                    <li><span class="status-pill status-completed">COMPLETED</span> — work is done, ready to record in history.</li>
+                    <li><span class="status-pill status-cancelled">CANCELLED</span> — work abandoned (e.g., parts unavailable).</li>
+                </ul>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">4</div>
+                    <h5>Close out the job in History</h5>
+                </div>
+                <p>When the work order is completed, record the final details in <strong>History</strong>:</p>
+                <ul>
+                    <li>Final <strong>maintenance cost</strong> (₱).</li>
+                    <li>Free-text <strong>remarks</strong> (parts replaced, follow-up notes, recommendations).</li>
+                    <li>The asset's status automatically returns to
+                        <span class="badge bg-success">Active</span>.</li>
+                </ul>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">5</div>
+                    <h5>Manage users and assets</h5>
+                </div>
+                <p>Use the <strong>Users</strong> page to create new accounts, change roles, or deactivate former employees.
+                Use the <strong>Assets</strong> page to register new equipment or mark items as
+                <span class="badge bg-secondary">Retired</span> when they're out of service.</p>
+            </div>
+
+            <div class="warning-box">
+                <i class="bi bi-exclamation-triangle text-warning"></i>
+                <strong>Reminder:</strong> only complete the <em>close-out</em> step after the technician has physically
+                confirmed the repair. A history record is permanent.
+            </div>
+        </section>
+
+        <!-- Auditor Guide -->
+        <section id="auditor-guide" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-shield-check text-primary"></i> 7. Auditor Guide</h3>
+            <p class="text-muted">
+                Auditors have <strong>read-only access</strong>. Your job is to verify that the process is being followed,
+                costs are reasonable, and nothing is being altered outside the system.
+            </p>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">1</div>
+                    <h5>Review requests, work orders & history</h5>
+                </div>
+                <p>Open <strong>Maintenance</strong>, <strong>Work Orders</strong>, and <strong>History</strong> to see the
+                full record of every job that has run through the system. Use the search and status filters to narrow
+                down to a specific time period, asset, or technician.</p>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">2</div>
+                    <h5>Drill into audit logs</h5>
+                </div>
+                <p>Open <strong>Audit Logs</strong>. Every create, update, approve, reject, status change, login, and
+                logout is recorded with the user, timestamp, IP address, and before/after values. Use this to:</p>
+                <ul>
+                    <li>Trace who approved a given request.</li>
+                    <li>Verify that no manual edits happened outside the workflow.</li>
+                    <li>Investigate suspicious patterns (e.g. multiple late-night approvals).</li>
+                </ul>
+            </div>
+
+            <div class="step-guide">
+                <div class="step-title">
+                    <div class="num">3</div>
+                    <h5>Export reports for off-system analysis</h5>
+                </div>
+                <p>The <strong>History</strong> page has an <strong>Export CSV</strong> button. Use it to pull maintenance
+                data into Excel or another reporting tool for periodic compliance reports.</p>
+            </div>
+
+            <div class="warning-box">
+                <i class="bi bi-exclamation-triangle text-warning"></i>
+                <strong>Remember:</strong> your account is read-only. If you spot a process violation, raise it with the
+                motorpool manager — do not attempt to modify any record from the UI.
+            </div>
+        </section>
+
+        <!-- Status Reference -->
+        <section id="statuses" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-tags-fill text-primary"></i> 8. Status Reference</h3>
+            <p class="text-muted">Quick reference for every status you'll see in the system.</p>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6 class="fw-bold mt-3"><i class="bi bi-flag"></i> Maintenance Request</h6>
+                    <table class="table table-sm table-bordered">
+                        <tbody>
+                            <tr>
+                                <td><span class="status-pill status-pending">PENDING</span></td>
+                                <td><small>Newly filed, awaiting manager review.</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="status-pill status-approved">APPROVED</span></td>
+                                <td><small>Manager approved. A work order can be created.</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="status-pill status-rejected">REJECTED</span></td>
+                                <td><small>Manager declined. See notes for reason.</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="status-pill status-completed">COMPLETED</span></td>
+                                <td><small>Repair is done and saved to history.</small></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold mt-3"><i class="bi bi-clipboard-check"></i> Work Order</h6>
+                    <table class="table table-sm table-bordered">
+                        <tbody>
+                            <tr>
+                                <td><span class="status-pill status-open">OPEN</span></td>
+                                <td><small>Created but the technician hasn't started.</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="status-pill status-progress">IN PROGRESS</span></td>
+                                <td><small>Technician is actively working on it.</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="status-pill status-completed">COMPLETED</span></td>
+                                <td><small>Work finished; close-out in history pending.</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="status-pill status-cancelled">CANCELLED</span></td>
+                                <td><small>Job was scrapped (e.g. parts unavailable).</small></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h6 class="fw-bold mt-3"><i class="bi bi-box2"></i> Asset</h6>
+                    <table class="table table-sm table-bordered">
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-success">ACTIVE</span></td>
+                                <td><small>In service and available.</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning text-dark">UNDER MAINTENANCE</span></td>
+                                <td><small>Currently being repaired (work order open).</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-secondary">RETIRED</span></td>
+                                <td><small>Permanently out of service.</small></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section id="faq" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-question-circle-fill text-primary"></i> 9. Frequently Asked Questions</h3>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span><i class="bi bi-question-circle text-primary"></i> I forgot my password. What do I do?</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    Contact your motorpool manager. They can reset your password from the
+                    <strong>Users</strong> page, or create a new account for you with a temporary password.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span><i class="bi bi-question-circle text-primary"></i> Why can't I see Work Orders / Users / Audit Logs in the sidebar?</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    Those modules are restricted by role. <strong>Work Orders</strong> and <strong>Users</strong> are
+                    manager-only. <strong>Audit Logs</strong> is visible to managers and auditors. If you need access,
+                    ask your manager to update your role.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span><i class="bi bi-question-circle text-primary"></i> My request was rejected. Can I resubmit it?</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    Yes. Read the manager's notes on the rejected request first, fix the issue (different asset, more
+                    detail, etc.), and submit a new request. The old one stays in history for traceability.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span><i class="bi bi-question-circle text-primary"></i> How long does approval usually take?</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    It depends on the manager's workload and the severity of the request. Critical safety issues are
+                    usually handled the same day. Routine maintenance is typically reviewed within 1–3 business days.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span><i class="bi bi-question-circle text-primary"></i> Can a staff member edit or delete their own request?</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    No. Once submitted, requests are part of the audit trail and cannot be edited or deleted by the
+                    requester. If you need to change something, contact the manager and they can reject the old one
+                    so you can file a corrected version.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span><i class="bi bi-question-circle text-primary"></i> What happens to the asset status during repair?</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    As soon as a work order is opened for the asset, its status automatically switches to
+                    <span class="badge bg-warning text-dark">Under Maintenance</span>. When the history record is filed,
+                    it returns to <span class="badge bg-success">Active</span>.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span><i class="bi bi-question-circle text-primary"></i> Is my data secure? Who can see costs?</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    Yes. All traffic is over HTTPS in production. Maintenance costs are visible <strong>only to
+                    managers</strong>. Standard staff and auditors see other fields but not the cost column. Every
+                    action is recorded in the audit log.
+                </div>
+            </div>
+        </section>
+
+        <!-- Glossary -->
+        <section id="glossary" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-journal-text text-primary"></i> 10. Glossary</h3>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <p class="mb-2">
+                        <span class="glossary-term">Asset</span> — a university-owned vehicle or piece of equipment tracked in the system.
+                    </p>
+                    <p class="mb-2">
+                        <span class="glossary-term">Maintenance Request</span> — a formal request to repair an asset, filed by a staff member.
+                    </p>
+                    <p class="mb-2">
+                        <span class="glossary-term">Work Order</span> — an instruction to a named technician to perform the approved repair.
+                    </p>
+                    <p class="mb-2">
+                        <span class="glossary-term">Technician</span> — a staff member assigned to carry out a work order.
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-2">
+                        <span class="glossary-term">Maintenance History</span> — the permanent log of completed jobs, including cost and remarks.
+                    </p>
+                    <p class="mb-2">
+                        <span class="glossary-term">Audit Log</span> — an immutable record of every action performed in the system.
+                    </p>
+                    <p class="mb-2">
+                        <span class="glossary-term">Manager Notes</span> — free-text comments a manager can attach to a request when approving or rejecting.
+                    </p>
+                    <p class="mb-2">
+                        <span class="glossary-term">KPI</span> — Key Performance Indicator (e.g., total assets, pending requests).
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Support -->
+        <section id="support" class="section-anchor mb-5">
+            <h3 class="fw-bold mb-3"><i class="bi bi-life-preserver text-primary"></i> 11. Need More Help?</h3>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-envelope-fill fs-2 text-primary mb-2 d-block"></i>
+                            <h6 class="fw-bold">Email Support</h6>
+                            <p class="text-muted small mb-0">Reach the motorpool team for account issues or process questions.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-chat-dots-fill fs-2 text-success mb-2 d-block"></i>
+                            <h6 class="fw-bold">Talk to Your Manager</h6>
+                            <p class="text-muted small mb-0">For approvals, work order questions, and access requests.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-book-fill fs-2 text-info mb-2 d-block"></i>
+                            <h6 class="fw-bold">This Guide</h6>
+                            <p class="text-muted small mb-0">Bookmark this page — it's the canonical reference for the system.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tip-box mt-4">
+                <i class="bi bi-stars text-success"></i>
+                <strong>Pro tip:</strong> press <kbd>Ctrl</kbd> + <kbd>D</kbd> (or <kbd>Cmd</kbd> + <kbd>D</kbd> on Mac)
+                to bookmark this guide for quick access.
+            </div>
+        </section>
+
+    </div><!-- /col-lg-9 -->
+</div><!-- /row -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleFaq(button) {
+        const item = button.closest('.faq-item');
+        item.classList.toggle('active');
+    }
+
+    // Smooth scroll for TOC links
+    document.querySelectorAll('.toc-card a[href^="#"]').forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+</script>
+{% endblock %}

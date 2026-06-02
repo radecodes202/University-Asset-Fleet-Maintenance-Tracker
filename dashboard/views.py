@@ -15,6 +15,11 @@ def dashboard_view(request):
     return render(request, 'dashboard/dashboard.html')
 
 
+@login_required(login_url='/login/')
+def userguide_view(request):
+    return render(request, 'dashboard/userguide.html')
+
+
 class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 

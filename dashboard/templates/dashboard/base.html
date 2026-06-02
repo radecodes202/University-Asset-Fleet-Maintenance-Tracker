@@ -150,6 +150,11 @@
                     </a>
                 </li>
                 {% endif %}
+                <li class="mt-2 pt-2 border-top border-secondary">
+                    <a href="{% url 'userguide' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'userguide' %}active{% endif %}">
+                        <i class="bi bi-book-half"></i> User Guide
+                    </a>
+                </li>
             </ul>
 
             <div class="mt-auto border-top pt-3">
