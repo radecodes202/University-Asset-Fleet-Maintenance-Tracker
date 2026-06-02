@@ -38,7 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    employee_id = models.CharField(max_length=50,blank=True, null=True, unique=True)
+    employee_id = models.CharField(max_length=50,blank=True, null=True, unique=True) # need primary key
     department = models.CharField(max_length=50, blank=True, null=True)
     role = models.CharField(
                     max_length=10,
@@ -99,15 +99,3 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_read_only(self):
         return self.role == Role.AUDITOR
-
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-if not User.objects.filter(email="admin@gmail.com").exists():
-    User.objects.create_superuser(
-        email="admin@gmail.com",
-        first_name="Admin",
-        last_name="User",
-        password="Admin123456!"
-    )
