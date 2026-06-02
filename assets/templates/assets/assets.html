@@ -1,4 +1,5 @@
 {% extends 'dashboard/base.html' %}
+{% load static %}
 
 {% block title %}Assets | FleetTrack{% endblock %}
 
@@ -12,10 +13,10 @@
         </div>
         {% if request.user.is_manager %}
         <div class="d-flex gap-2">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssetModal" title="Create a new asset record">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssetModal">
                 <i class="bi bi-plus-circle"></i> Add Asset
             </button>
-            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal" title="Create a new asset category">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
                 <i class="bi bi-tag"></i> Category
             </button>
         </div>
@@ -23,7 +24,6 @@
     </div>
 </div>
 
-<!-- Filters -->
 <div class="card shadow-sm border-0 p-3 mb-4">
     <div class="row g-2">
         <div class="col-md-4">
@@ -48,7 +48,6 @@
     </div>
 </div>
 
-<!-- Assets Table -->
 <div class="card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
@@ -59,14 +58,12 @@
                     <th class="text-muted small fw-600">Category</th>
                     <th class="text-muted small fw-600">Serial Number</th>
                     <th class="text-muted small fw-600">Status</th>
-                    {% if request.user.is_manager %}
-                    <th class="text-muted small fw-600 text-end pe-3">Cost</th>
-                    {% endif %}
+                    <th class="text-muted small fw-600 text-end pe-3 cost-col" style="display: none;">Cost</th>
                 </tr>
             </thead>
             <tbody id="assets-table-body">
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-5">
+                    <td colspan="6" class="text-center text-muted py-5">
                         <i class="bi bi-hourglass-split"></i> Loading assets...
                     </td>
                 </tr>
@@ -76,38 +73,11 @@
 </div>
 
 <style>
-    .table thead th {
-        background-color: #f8f9fa;
-        border-top: none;
-    }
-
-    .table tbody tr {
-        border-bottom: 1px solid #e9ecef;
-        transition: background-color 0.2s ease;
-    }
-
-    .table tbody tr:hover {
-        background-color: #f8f9fa;
-    }
-
-    .asset-image {
-        width: 50px;
-        height: 50px;
-        object-fit: cover;
-        border-radius: 6px;
-        background-color: #f0f0f0;
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.35rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
+    .table thead th { background-color: #f8f9fa; border-top: none; }
+    .table tbody tr { border-bottom: 1px solid #e9ecef; transition: background-color 0.2s ease; }
+    .table tbody tr:hover { background-color: #f8f9fa; }
+    .asset-image { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; background-color: #f0f0f0; }
+    .status-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
     .status-badge.active { background-color: #d4edda; color: #155724; }
     .status-badge.maintenance { background-color: #fff3cd; color: #856404; }
     .status-badge.retired { background-color: #e2e3e5; color: #383d41; }
@@ -117,342 +87,14 @@
 
 {% block scripts %}
 <script>
-    async function loadAssets() {
-        const search   = document.getElementById('search-input').value;
-        const status   = document.getElementById('status-filter').value;
-        const category = document.getElementById('category-filter').value;
-
-        let url = '/api/assets/?';
-        if (search)   url += `search=${search}&`;
-        if (status)   url += `status=${status}&`;
-        if (category) url += `category=${category}&`;
-
-        const response = await fetch(url, {
-            credentials: 'same-origin',
-        });
-
-        const data = await response.json();
-        const tbody = document.getElementById('assets-table-body');
-
-        if (!data.results || data.results.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
-                        No assets found.
-                    </td>
-                </tr>`;
-            return;
-        }
-
-        tbody.innerHTML = data.results.map(asset => `
-            <tr>
-                <td>
-                    ${asset.asset_image ?
-                        `<img src="${asset.asset_image}" style="width:50px;height:50px;object-fit:cover;border-radius:6px;">`
-                        : '<span class="text-muted small">No image</span>'}
-                </td>
-                <td>${asset.asset_name}</td>
-                <td>${asset.category ? asset.category.name : '-'}</td>
-                <td>${asset.serial_number}</td>
-                <td>
-                    <span class="badge ${getStatusBadge(asset.current_status)}">
-                        ${asset.current_status}
-                    </span>
-                </td>
-                <td>${asset.date_added ? asset.date_added.substring(0,10) : '-'}</td>
-                {% if request.user.is_manager %}
-                <td>₱${Number(asset.purchase_cost).toLocaleString()}</td>
-                {% endif %}
-
-            </tr>
-        `).join('');
-    }
-
-    function getStatusBadge(status) {
-        const badges = {
-            'ACTIVE':            'bg-success',
-            'UNDER_MAINTENANCE': 'bg-warning text-dark',
-            'RETIRED':           'bg-secondary',
-        };
-        return badges[status] || 'bg-light text-dark';
-    }
-
-    async function loadCategories() {
-        const response = await fetch('/api/assets/categories/', {
-            credentials: 'same-origin',
-        });
-        const data = await response.json();
-        const select = document.getElementById('category-filter');
-        if (data.results) {
-            data.results.forEach(cat => {
-                select.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
-            });
-        }
-    }
-
-    async function populateModalCategories() {
-        const response = await fetch('/api/assets/categories/', {
-            credentials: 'same-origin',
-        });
-        const data = await response.json();
-        const select = document.getElementById('asset-category');
-        if (select && data.results) {
-            data.results.forEach(cat => {
-                select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-            });
-        }
-    }
-
-    async function addAsset() {
-        const name         = document.getElementById('asset-name').value;
-        const category     = document.getElementById('asset-category').value;
-        const serial       = document.getElementById('asset-serial').value;
-        const purchaseDate = document.getElementById('asset-purchase-date').value;
-        const cost         = document.getElementById('asset-cost').value;
-        const imageFile    = document.getElementById('asset-image').files[0];
-        const errDiv       = document.getElementById('asset-error');
-
-        if (!name || !category || !serial || !purchaseDate || !cost) {
-            errDiv.textContent = 'Please fill in all required fields.';
-            errDiv.classList.remove('d-none');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('asset_name',    name);
-        formData.append('category_id',   category);
-        formData.append('serial_number', serial);
-        formData.append('purchase_date', purchaseDate);
-        formData.append('purchase_cost', cost);
-        if (imageFile) {
-            formData.append('asset_image', imageFile);
-        }
-
-        const response = await fetch('/api/assets/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            credentials: 'same-origin',
-            body: formData,
-        });
-
-        if (response.ok) {
-            bootstrap.Modal.getInstance(
-                document.getElementById('addAssetModal')
-            ).hide();
-            loadAssets();
-        } else {
-            const err = await response.json();
-            errDiv.textContent = JSON.stringify(err);
-            errDiv.classList.remove('d-none');
-        }
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            document.cookie.split(';').forEach(cookie => {
-                cookie = cookie.trim();
-                if (cookie.startsWith(name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.split('=')[1]);
-                }
-            });
-        }
-        return cookieValue;
-    }
-
-    // Variable to track if we should return to asset modal after category creation
+    const IS_MANAGER = {% if request.user.is_manager %}true{% else %}false{% endif %};
     let returnToAssetModal = false;
     let newlyCreatedCategoryId = null;
 
-    function setReturnToAssetModal(value) {
-        returnToAssetModal = value;
-    }
-
-    async function refreshCategoryDropdowns() {
-        const response = await fetch('/api/assets/categories/', {
-            credentials: 'same-origin',
-        });
-        const data = await response.json();
-        
-        // Refresh category filter dropdown
-        const filterSelect = document.getElementById('category-filter');
-        if (filterSelect) {
-            const currentValue = filterSelect.value;
-            filterSelect.innerHTML = '<option value="">All Categories</option>';
-            if (data.results) {
-                data.results.forEach(cat => {
-                    filterSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
-                });
-            }
-            filterSelect.value = currentValue;
-        }
-        
-        // Refresh asset category dropdown in modal
-        const assetSelect = document.getElementById('asset-category');
-        if (assetSelect) {
-            const currentValue = assetSelect.value;
-            assetSelect.innerHTML = '<option value="">Select category...</option>';
-            if (data.results) {
-                data.results.forEach(cat => {
-                    assetSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-                });
-            }
-            // If a new category was just created, select it
-            if (newlyCreatedCategoryId) {
-                assetSelect.value = newlyCreatedCategoryId;
-                newlyCreatedCategoryId = null;
-            } else {
-                assetSelect.value = currentValue;
-            }
-        }
-    }
-
-    async function addCategory() {
-        const name = document.getElementById('category-name').value.trim();
-        const description = document.getElementById('category-description').value.trim();
-        const errDiv = document.getElementById('category-error');
-
-        if (!name) {
-            errDiv.textContent = 'Category name is required.';
-            errDiv.classList.remove('d-none');
-            return;
-        }
-
-        const response = await fetch('/api/assets/categories/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({
-                name: name,
-                description: description
-            }),
-        });
-
-        if (response.ok) {
-            const newCategory = await response.json();
-            newlyCreatedCategoryId = newCategory.id;
-            
-            // Close the category modal
-            const categoryModal = bootstrap.Modal.getInstance(
-                document.getElementById('addCategoryModal')
-            );
-            if (categoryModal) {
-                categoryModal.hide();
-            }
-            
-            // Clear form
-            document.getElementById('category-name').value = '';
-            document.getElementById('category-description').value = '';
-            errDiv.classList.add('d-none');
-            
-            // Refresh category dropdowns
-            await refreshCategoryDropdowns();
-            
-            // Show success feedback
-            showSuccessMessage('Category created successfully!');
-            
-            // If opened from asset modal, reopen asset modal
-            if (returnToAssetModal) {
-                setTimeout(() => {
-                    const assetModal = new bootstrap.Modal(document.getElementById('addAssetModal'));
-                    assetModal.show();
-                    returnToAssetModal = false;
-                }, 300);
-            }
-        } else {
-            const err = await response.json();
-            if (err.name) {
-                errDiv.textContent = Array.isArray(err.name) ? err.name.join(', ') : err.name;
-            } else {
-                errDiv.textContent = JSON.stringify(err);
-            }
-            errDiv.classList.remove('d-none');
-        }
-    }
-
-    function showSuccessMessage(message) {
-        // Create a temporary success alert
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-        alertDiv.style.zIndex = '9999';
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-{% block scripts %}
-<script>
-    let currentStatusFilter = '';
-
-    function filterByStatus(status) {
-        currentStatusFilter = status;
-        document.querySelectorAll('.page-header .btn-outline-secondary, .page-header .btn-outline-success, .page-header .btn-outline-warning, .page-header .btn-outline-danger').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        event.target.closest('button').classList.add('active');
-        loadAssets();
-    }
-
-    async function loadAssets() {
-        const searchInput = document.getElementById('search-input').value;
-        const categoryFilter = document.getElementById('category-filter').value;
-
-        let url = '/api/assets/?';
-        if (searchInput) url += `search=${searchInput}&`;
-        if (categoryFilter) url += `category=${categoryFilter}&`;
-        if (currentStatusFilter) url += `status=${currentStatusFilter}&`;
-
-        const response = await fetch(url, {
-            credentials: 'same-origin',
-        });
-
-        const data = await response.json();
-        const tbody = document.getElementById('assets-table-body');
-
-        if (!data.results || data.results.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center text-muted py-5">
-                        <i class="bi bi-inbox"></i> No assets found.
-                    </td>
-                </tr>`;
-            return;
-        }
-
-        tbody.innerHTML = data.results.map(asset => `
-            <tr>
-                <td class="ps-3">
-                    ${asset.asset_image ?
-                        `<img src="${asset.asset_image}" class="asset-image">`
-                        : '<span class="text-muted small"><i class="bi bi-image"></i> No image</span>'}
-                </td>
-                <td><strong><i class="bi bi-box2"></i> ${asset.asset_name}</strong></td>
-                <td><small class="text-muted">${asset.category ? asset.category.name : '-'}</small></td>
-                <td><small class="text-muted">${asset.serial_number}</small></td>
-                <td>
-                    <span class="status-badge ${getStatusClass(asset.current_status)}">
-                        ${getStatusIcon(asset.current_status)} ${asset.current_status.replace(/_/g, ' ')}
-                    </span>
-                </td>
-                {% if request.user.is_manager %}
-                <td class="text-end pe-3">
-                    <span class="badge bg-light text-dark">₱${Number(asset.purchase_cost).toLocaleString('en-PH', {maximumFractionDigits: 0})}</span>
-                </td>
-                {% endif %}
-            </tr>
-        `).join('');
-    }
+    function setReturnToAssetModal(value) { returnToAssetModal = value; }
 
     function getStatusClass(status) {
-        const classes = {
-            'ACTIVE': 'active',
-            'UNDER_MAINTENANCE': 'maintenance',
-            'RETIRED': 'retired',
-        };
+        const classes = { 'ACTIVE': 'active', 'UNDER_MAINTENANCE': 'maintenance', 'RETIRED': 'retired' };
         return classes[status] || 'active';
     }
 
@@ -465,79 +107,6 @@
         return icons[status] || '<i class="bi bi-circle"></i>';
     }
 
-    async function loadCategories() {
-        const response = await fetch('/api/assets/categories/', {
-            credentials: 'same-origin',
-        });
-        const data = await response.json();
-        const select = document.getElementById('category-filter');
-        if (data.results) {
-            data.results.forEach(cat => {
-                select.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
-            });
-        }
-    }
-
-    async function populateModalCategories() {
-        const response = await fetch('/api/assets/categories/', {
-            credentials: 'same-origin',
-        });
-        const data = await response.json();
-        const select = document.getElementById('asset-category');
-        if (select && data.results) {
-            data.results.forEach(cat => {
-                select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-            });
-        }
-    }
-
-    async function addAsset() {
-        const name         = document.getElementById('asset-name').value;
-        const category     = document.getElementById('asset-category').value;
-        const serial       = document.getElementById('asset-serial').value;
-        const purchaseDate = document.getElementById('asset-purchase-date').value;
-        const cost         = document.getElementById('asset-cost').value;
-        const imageFile    = document.getElementById('asset-image').files[0];
-        const errDiv       = document.getElementById('asset-error');
-
-        if (!name || !category || !serial || !purchaseDate || !cost) {
-            errDiv.textContent = 'Please fill in all required fields.';
-            errDiv.classList.remove('d-none');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('asset_name',    name);
-        formData.append('category_id',   category);
-        formData.append('serial_number', serial);
-        formData.append('purchase_date', purchaseDate);
-        formData.append('purchase_cost', cost);
-        if (imageFile) {
-            formData.append('asset_image', imageFile);
-        }
-
-        const response = await fetch('/api/assets/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            credentials: 'same-origin',
-            body: formData,
-        });
-
-        if (response.ok) {
-            bootstrap.Modal.getInstance(
-                document.getElementById('addAssetModal')
-            ).hide();
-            showSuccess('Asset created successfully!');
-            loadAssets();
-        } else {
-            const err = await response.json();
-            errDiv.textContent = JSON.stringify(err);
-            errDiv.classList.remove('d-none');
-        }
-    }
-
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -551,145 +120,102 @@
         return cookieValue;
     }
 
-    let returnToAssetModal = false;
-    let newlyCreatedCategoryId = null;
-
-    function setReturnToAssetModal(value) {
-        returnToAssetModal = value;
-    }
-
-    async function refreshCategoryDropdowns() {
-        const response = await fetch('/api/assets/categories/', {
-            credentials: 'same-origin',
-        });
-        const data = await response.json();
-        
-        const filterSelect = document.getElementById('category-filter');
-        if (filterSelect) {
-            const currentValue = filterSelect.value;
-            filterSelect.innerHTML = '<option value="">All Categories</option>';
-            if (data.results) {
-                data.results.forEach(cat => {
-                    filterSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
-                });
-            }
-            filterSelect.value = currentValue;
-        }
-        
-        const assetSelect = document.getElementById('asset-category');
-        if (assetSelect) {
-            const currentValue = assetSelect.value;
-            assetSelect.innerHTML = '<option value="">Select category...</option>';
-            if (data.results) {
-                data.results.forEach(cat => {
-                    assetSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-                });
-            }
-            if (newlyCreatedCategoryId) {
-                assetSelect.value = newlyCreatedCategoryId;
-                newlyCreatedCategoryId = null;
-            } else {
-                assetSelect.value = currentValue;
-            }
-        }
-    }
-
-    async function addCategory() {
-        const name = document.getElementById('category-name').value.trim();
-        const description = document.getElementById('category-description').value.trim();
-        const errDiv = document.getElementById('category-error');
-
-        if (!name) {
-            errDiv.textContent = 'Category name is required.';
-            errDiv.classList.remove('d-none');
-            return;
-        }
-
-        const response = await fetch('/api/assets/categories/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({
-                name: name,
-                description: description
-            }),
-        });
-
-        if (response.ok) {
-            const newCategory = await response.json();
-            newlyCreatedCategoryId = newCategory.id;
-            
-            const categoryModal = bootstrap.Modal.getInstance(
-                document.getElementById('addCategoryModal')
-            );
-            if (categoryModal) {
-                categoryModal.hide();
-            }
-            
-            document.getElementById('category-name').value = '';
-            document.getElementById('category-description').value = '';
-            errDiv.classList.add('d-none');
-            
-            await refreshCategoryDropdowns();
-            showSuccess('Category created successfully!');
-            
-            if (returnToAssetModal) {
-                setTimeout(() => {
-                    const assetModal = new bootstrap.Modal(document.getElementById('addAssetModal'));
-                    assetModal.show();
-                    returnToAssetModal = false;
-                }, 300);
-            }
-        } else {
-            const err = await response.json();
-            if (err.name) {
-                errDiv.textContent = Array.isArray(err.name) ? err.name.join(', ') : err.name;
-            } else {
-                errDiv.textContent = JSON.stringify(err);
-            }
-            errDiv.classList.remove('d-none');
-        }
-    }
-
     function showSuccess(message) {
         const alertDiv = document.createElement('div');
         alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
         alertDiv.style.zIndex = '9999';
-        alertDiv.innerHTML = `
-            <i class="bi bi-check-circle"></i> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
+        alertDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
         document.body.appendChild(alertDiv);
-        
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 3000);
+        setTimeout(() => alertDiv.remove(), 3000);
     }
 
-    document.getElementById('addCategoryModal').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('category-error').classList.add('d-none');
-        if (!returnToAssetModal) {
-            document.getElementById('category-name').value = '';
-            document.getElementById('category-description').value = '';
-        }
-    });
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
 
-    document.getElementById('addAssetModal').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('asset-error').classList.add('d-none');
-        document.getElementById('asset-name').value = '';
-        document.getElementById('asset-serial').value = '';
-        document.getElementById('asset-purchase-date').value = '';
-        document.getElementById('asset-cost').value = '';
-        document.getElementById('asset-image').value = '';
-    });
+    async function loadAssets() {
+        const search   = document.getElementById('search-input').value;
+        const status   = document.getElementById('status-filter').value;
+        const category = document.getElementById('category-filter').value;
+
+        let url = '/api/assets/?';
+        if (search)   url += 'search=' + encodeURIComponent(search) + '&';
+        if (status)   url += 'status=' + status + '&';
+        if (category) url += 'category=' + encodeURIComponent(category) + '&';
+
+        try {
+            const response = await fetch(url, { credentials: 'same-origin' });
+            const data = await response.json();
+            const tbody = document.getElementById('assets-table-body');
+
+            // Show/hide cost column header
+            document.querySelectorAll('.cost-col').forEach(el => {
+                el.style.display = IS_MANAGER ? '' : 'none';
+            });
+
+            if (!data.results || data.results.length === 0) {
+                const colspan = IS_MANAGER ? 6 : 5;
+                tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="text-center text-muted py-4"><i class="bi bi-inbox"></i> No assets found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.results.map(asset => {
+                const cost = Number(asset.purchase_cost || 0).toLocaleString('en-PH', {maximumFractionDigits: 0});
+                const imageCell = asset.asset_image
+                    ? '<img src="' + escapeHtml(asset.asset_image) + '" class="asset-image">'
+                    : '<span class="text-muted small"><i class="bi bi-image"></i> No image</span>';
+                const costCell = IS_MANAGER
+                    ? '<td class="text-end pe-3 cost-col"><span class="badge bg-light text-dark">₱' + cost + '</span></td>'
+                    : '';
+                return '<tr>' +
+                    '<td class="ps-3">' + imageCell + '</td>' +
+                    '<td><strong><i class="bi bi-box2"></i> ' + escapeHtml(asset.asset_name) + '</strong></td>' +
+                    '<td><small class="text-muted">' + escapeHtml(asset.category ? asset.category.name : '-') + '</small></td>' +
+                    '<td><small class="text-muted">' + escapeHtml(asset.serial_number || '-') + '</small></td>' +
+                    '<td><span class="status-badge ' + getStatusClass(asset.current_status) + '">' + getStatusIcon(asset.current_status) + ' ' + escapeHtml((asset.current_status || '').replace(/_/g, ' ')) + '</span></td>' +
+                    costCell +
+                    '</tr>';
+            }).join('');
+        } catch (err) {
+            console.error('Error loading assets:', err);
+        }
+    }
+
+    async function loadCategories() {
+        try {
+            const response = await fetch('/api/assets/categories/', { credentials: 'same-origin' });
+            const data = await response.json();
+            const select = document.getElementById('category-filter');
+            if (select && data.results) {
+                data.results.forEach(cat => {
+                    select.innerHTML += '<option value="' + escapeHtml(cat.name) + '">' + escapeHtml(cat.name) + '</option>';
+                });
+            }
+        } catch (err) { console.error('Error loading categories:', err); }
+    }
+
+    async function refreshCategoryDropdowns() {
+        try {
+            const response = await fetch('/api/assets/categories/', { credentials: 'same-origin' });
+            const data = await response.json();
+            const filterSelect = document.getElementById('category-filter');
+            if (filterSelect) {
+                const currentValue = filterSelect.value;
+                filterSelect.innerHTML = '<option value="">All Categories</option>';
+                if (data.results) {
+                    data.results.forEach(cat => {
+                        filterSelect.innerHTML += '<option value="' + escapeHtml(cat.name) + '">' + escapeHtml(cat.name) + '</option>';
+                    });
+                }
+                filterSelect.value = currentValue;
+            }
+        } catch (err) { console.error('Error refreshing categories:', err); }
+    }
 
     loadCategories();
     loadAssets();
-    {% if request.user.is_manager %}
-    populateModalCategories();
-    {% endif %}
 </script>
 {% endblock %}

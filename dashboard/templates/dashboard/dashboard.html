@@ -94,19 +94,6 @@
     </div>
 </div>
 
-{% if request.user.is_manager %}
-<div class="row g-3 mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm border-0 p-4">
-            <h6 class="fw-bold mb-3">Maintenance Cost Trend</h6>
-            <div style="max-height: 350px;">
-                <canvas id="costTrendChart"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
 <!-- Recent Activity Section -->
 <div class="section-title">Recent Activity</div>
 
@@ -202,7 +189,7 @@
 
 {% block scripts %}
 <script>
-    let statusChart, requestStatusChart, costTrendChart;
+    let statusChart, requestStatusChart;
 
     async function loadDashboard() {
         const response = await fetch('/api/dashboard/summary/', {
@@ -280,56 +267,6 @@
                     plugins: {
                         legend: {
                             position: 'bottom',
-                        }
-                    }
-                }
-            });
-        }
-
-        // Cost Trend Chart (last 12 months)
-        if (document.getElementById('costTrendChart') && data.total_maintenance_cost !== undefined) {
-            const costCtx = document.getElementById('costTrendChart');
-            if (costTrendChart) costTrendChart.destroy();
-            
-            // Generate sample data for demonstration
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const costData = Array(12).fill(0).map(() => Math.floor(Math.random() * 50000));
-            
-            costTrendChart = new Chart(costCtx, {
-                type: 'line',
-                data: {
-                    labels: months,
-                    datasets: [{
-                        label: 'Monthly Maintenance Cost (₱)',
-                        data: costData,
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#0d6efd',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '₱' + value.toLocaleString();
-                                }
-                            }
                         }
                     }
                 }
