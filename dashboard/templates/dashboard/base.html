@@ -122,18 +122,18 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{% url 'requests' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'requests' %}active{% endif %}">
+                    <a href="{% url 'maintenance:requests' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'requests' %}active{% endif %}">
                         <i class="bi bi-wrench"></i> Maintenance
                     </a>
                 </li>
                 <li>
-                    <a href="{% url 'history' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'history' %}active{% endif %}">
+                    <a href="{% url 'maintenance:history' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'history' %}active{% endif %}">
                         <i class="bi bi-clock-history"></i> History
                     </a>
                 </li>
                 {% if user.is_manager %}
                 <li>
-                    <a href="{% url 'workorders' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'workorders' %}active{% endif %}">
+                    <a href="{% url 'maintenance:workorders' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'workorders' %}active{% endif %}">
                         <i class="bi bi-clipboard-check"></i> Work Orders
                     </a>
                 </li>
