@@ -51,14 +51,14 @@
 <div class="card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr class="border-bottom">
-                    <th class="text-muted small fw-600 ps-3">Image</th>
-                    <th class="text-muted small fw-600">Asset Name</th>
-                    <th class="text-muted small fw-600">Category</th>
-                    <th class="text-muted small fw-600">Serial Number</th>
-                    <th class="text-muted small fw-600">Status</th>
-                    <th class="text-muted small fw-600 text-end pe-3 cost-col" style="display: none;">Cost</th>
+            <thead class="table-dark">
+                <tr>
+                    <th class="ps-3">Image</th>
+                    <th>Asset Name</th>
+                    <th>Category</th>
+                    <th>Serial Number</th>
+                    <th>Status</th>
+                    <th class="text-end pe-3 cost-col" style="display: none;">Cost</th>
                 </tr>
             </thead>
             <tbody id="assets-table-body">
@@ -73,7 +73,6 @@
 </div>
 
 <style>
-    .table thead th { background-color: #f8f9fa; border-top: none; }
     .table tbody tr { border-bottom: 1px solid #e9ecef; transition: background-color 0.2s ease; }
     .table tbody tr:hover { background-color: #f8f9fa; }
     .asset-image { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; background-color: #f0f0f0; }

@@ -64,15 +64,15 @@
 <div class="card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr class="border-bottom">
-                    <th class="text-muted small fw-600 ps-3">Asset</th>
-                    <th class="text-muted small fw-600">Work Order</th>
-                    <th class="text-muted small fw-600">Completed By</th>
-                    <th class="text-muted small fw-600">Date</th>
-                    <th class="text-muted small fw-600">Remarks</th>
+            <thead class="table-dark">
+                <tr>
+                    <th class="ps-3">Asset</th>
+                    <th>Work Order</th>
+                    <th>Completed By</th>
+                    <th>Date</th>
+                    <th>Remarks</th>
                     {% if request.user.is_manager %}
-                    <th class="text-muted small fw-600 text-end pe-3">Cost</th>
+                    <th class="text-end pe-3">Cost</th>
                     {% endif %}
                 </tr>
             </thead>
@@ -88,11 +88,6 @@
 </div>
 
 <style>
-    .table thead th {
-        background-color: #f8f9fa;
-        border-top: none;
-    }
-
     .table tbody tr {
         border-bottom: 1px solid #e9ecef;
         transition: background-color 0.2s ease;

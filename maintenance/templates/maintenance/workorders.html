@@ -20,8 +20,14 @@
 
 <!-- Filters -->
 <div class="card shadow-sm border-0 p-3 mb-4">
-    <div class="row g-2">
-        <div class="col-md-4">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" class="form-control" placeholder="Search by WO #, asset, or technician...">
+            </div>
+        </div>
+        <div class="col-md-3">
             <select id="status-filter" class="form-select">
                 <option value="">All Statuses</option>
                 <option value="OPEN">Open</option>
@@ -30,8 +36,10 @@
                 <option value="CANCELLED">Cancelled</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <button class="btn btn-secondary w-100" onclick="loadWorkOrders()">Filter</button>
+        <div class="col-md-3">
+            <button class="btn btn-secondary w-100" onclick="loadWorkOrders()">
+                <i class="bi bi-funnel"></i> Apply Filter
+            </button>
         </div>
     </div>
 </div>
@@ -40,14 +48,14 @@
 <div class="card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr class="border-bottom">
-                    <th class="text-muted small fw-600 ps-3">WO #</th>
-                    <th class="text-muted small fw-600">Asset</th>
-                    <th class="text-muted small fw-600">Technician</th>
-                    <th class="text-muted small fw-600">Date Started</th>
-                    <th class="text-muted small fw-600">Status</th>
-                    <th class="text-muted small fw-600 text-end pe-3 actions-col" style="display: none;">Actions</th>
+            <thead class="table-dark">
+                <tr>
+                    <th>WO #</th>
+                    <th>Asset</th>
+                    <th>Technician</th>
+                    <th>Date Started</th>
+                    <th>Status</th>
+                    <th class="text-end pe-3 actions-col" style="display: none;">Actions</th>
                 </tr>
             </thead>
             <tbody id="workorders-table-body">
@@ -62,7 +70,6 @@
 </div>
 
 <style>
-    .table thead th { background-color: #f8f9fa; border-top: none; }
     .table tbody tr { border-bottom: 1px solid #e9ecef; transition: background-color 0.2s ease; }
     .table tbody tr:hover { background-color: #f8f9fa; }
     .status-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
@@ -146,6 +153,7 @@
 <script>
     const IS_MANAGER = {% if request.user.is_manager %}true{% else %}false{% endif %};
     let currentWorkOrderId = null;
+    let allWorkOrders = [];
 
     function getStatusClass(status) {
         const classes = { 'OPEN': 'open', 'IN_PROGRESS': 'progress', 'COMPLETED': 'completed', 'CANCELLED': 'cancelled' };
@@ -247,56 +255,75 @@
         }
     }
 
-    async function loadWorkOrders() {
-        const statusFilter = document.getElementById('status-filter').value;
-        let url = '/api/maintenance/workorders/?';
-        if (statusFilter) url += 'status=' + statusFilter + '&';
+    function buildWorkOrderRow(wo) {
+        let actionsCell = '';
+        if (IS_MANAGER) {
+            let buttons = '';
+            if (wo.status === 'OPEN') {
+                buttons += '<button class="btn btn-sm btn-outline-primary" onclick="updateStatus(' + wo.id + ', \'IN_PROGRESS\')" title="Start work on this order"><i class="bi bi-play-circle"></i> Start</button>';
+            }
+            if (wo.status === 'IN_PROGRESS') {
+                buttons += '<button class="btn btn-sm btn-outline-success" onclick="openCompleteModal(' + wo.id + ')" title="Complete this work order"><i class="bi bi-check-circle"></i> Complete</button>';
+            }
+            if (wo.status !== 'CANCELLED' && wo.status !== 'COMPLETED') {
+                buttons += '<button class="btn btn-sm btn-outline-danger" onclick="cancelWorkOrder(' + wo.id + ')" title="Cancel this work order"><i class="bi bi-x-circle"></i> Cancel</button>';
+            }
+            actionsCell = '<td class="pe-3 actions-col"><div class="action-buttons">' + buttons + '</div></td>';
+        }
+        // Prefer the human-readable name from the serializer; fall back to the raw ID.
+        const techName = wo.assigned_technician_name || (wo.assigned_technician ? '#' + wo.assigned_technician : null);
+        const techCell = techName
+            ? '<td><span class="tech-avatar">' + escapeHtml(getInitials(techName)) + '</span><small>' + escapeHtml(techName) + '</small></td>'
+            : '<td><small class="text-muted">—</small></td>';
+        return '<tr>' +
+            '<td class="ps-3"><strong><i class="bi bi-receipt"></i> WO-' + escapeHtml(wo.id) + '</strong></td>' +
+            '<td><small class="text-muted">' + (wo.maintenance_request ? 'MR-' + escapeHtml(wo.maintenance_request) : '-') + '</small></td>' +
+            techCell +
+            '<td><small class="text-muted">' + (wo.date_started ? escapeHtml(wo.date_started.substring(0,10)) : '—') + '</small></td>' +
+            '<td><span class="status-badge ' + getStatusClass(wo.status) + '">' + getStatusIcon(wo.status) + ' ' + escapeHtml((wo.status || '').replace(/_/g, ' ')) + '</span></td>' +
+            actionsCell +
+            '</tr>';
+    }
 
+    function renderWorkOrders() {
+        const search  = (document.getElementById('search-input').value || '').toLowerCase().trim();
+        const status  = document.getElementById('status-filter').value;
+        const tbody   = document.getElementById('workorders-table-body');
+        const colspan = IS_MANAGER ? 6 : 5;
+
+        const filtered = (allWorkOrders || []).filter(wo => {
+            if (status && wo.status !== status) return false;
+            if (search) {
+                const haystack = [
+                    'WO-' + (wo.id || ''),
+                    wo.maintenance_request ? 'MR-' + wo.maintenance_request : '',
+                    wo.assigned_technician_name || '',
+                    wo.work_description || '',
+                    (wo.status || '').replace(/_/g, ' '),
+                ].join(' ').toLowerCase();
+                if (!haystack.includes(search)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="text-center text-muted py-5"><i class="bi bi-inbox"></i> No work orders match your search.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = filtered.map(buildWorkOrderRow).join('');
+    }
+
+    async function loadWorkOrders() {
         // Show/hide actions column header
         document.querySelectorAll('.actions-col').forEach(el => {
             el.style.display = IS_MANAGER ? '' : 'none';
         });
 
         try {
-            const response = await fetch(url, { credentials: 'same-origin' });
+            const response = await fetch('/api/maintenance/workorders/?', { credentials: 'same-origin' });
             const data = await response.json();
-            const tbody = document.getElementById('workorders-table-body');
-
-            if (!data.results || data.results.length === 0) {
-                const colspan = IS_MANAGER ? 6 : 5;
-                tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="text-center text-muted py-5"><i class="bi bi-inbox"></i> No work orders found.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = data.results.map(wo => {
-                let actionsCell = '';
-                if (IS_MANAGER) {
-                    let buttons = '';
-                    if (wo.status === 'OPEN') {
-                        buttons += '<button class="btn btn-sm btn-outline-primary" onclick="updateStatus(' + wo.id + ', \'IN_PROGRESS\')" title="Start work on this order"><i class="bi bi-play-circle"></i> Start</button>';
-                    }
-                    if (wo.status === 'IN_PROGRESS') {
-                        buttons += '<button class="btn btn-sm btn-outline-success" onclick="openCompleteModal(' + wo.id + ')" title="Complete this work order"><i class="bi bi-check-circle"></i> Complete</button>';
-                    }
-                    if (wo.status !== 'CANCELLED' && wo.status !== 'COMPLETED') {
-                        buttons += '<button class="btn btn-sm btn-outline-danger" onclick="cancelWorkOrder(' + wo.id + ')" title="Cancel this work order"><i class="bi bi-x-circle"></i> Cancel</button>';
-                    }
-                    actionsCell = '<td class="pe-3 actions-col"><div class="action-buttons">' + buttons + '</div></td>';
-                }
-                // Prefer the human-readable name from the serializer; fall back to the raw ID.
-                const techName = wo.assigned_technician_name || (wo.assigned_technician ? '#' + wo.assigned_technician : null);
-                const techCell = techName
-                    ? '<td><span class="tech-avatar">' + escapeHtml(getInitials(techName)) + '</span><small>' + escapeHtml(techName) + '</small></td>'
-                    : '<td><small class="text-muted">—</small></td>';
-                return '<tr>' +
-                    '<td class="ps-3"><strong><i class="bi bi-receipt"></i> WO-' + escapeHtml(wo.id) + '</strong></td>' +
-                    '<td><small class="text-muted">' + (wo.maintenance_request ? 'MR-' + escapeHtml(wo.maintenance_request) : '-') + '</small></td>' +
-                    techCell +
-                    '<td><small class="text-muted">' + (wo.date_started ? escapeHtml(wo.date_started.substring(0,10)) : '—') + '</small></td>' +
-                    '<td><span class="status-badge ' + getStatusClass(wo.status) + '">' + getStatusIcon(wo.status) + ' ' + escapeHtml((wo.status || '').replace(/_/g, ' ')) + '</span></td>' +
-                    actionsCell +
-                    '</tr>';
-            }).join('');
+            allWorkOrders = data.results || [];
+            renderWorkOrders();
         } catch (err) {
             console.error('Error loading work orders:', err);
         }
@@ -408,6 +435,10 @@
             await updateStatus(id, 'CANCELLED');
         }
     }
+
+    // Live search + status filter
+    document.getElementById('search-input').addEventListener('input', renderWorkOrders);
+    document.getElementById('status-filter').addEventListener('change', renderWorkOrders);
 
     if (IS_MANAGER) {
         loadApprovedRequests();

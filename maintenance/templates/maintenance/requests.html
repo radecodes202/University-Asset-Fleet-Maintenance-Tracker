@@ -24,24 +24,24 @@
     </div>
 </div>
 
-<!-- Status Filter Pills -->
-<div class="mb-4">
-    <div class="d-flex gap-2 flex-wrap">
-        <button class="btn btn-sm btn-outline-secondary active" onclick="filterByStatus('')">
-            <i class="bi bi-funnel"></i> All
-        </button>
-        <button class="btn btn-sm btn-outline-warning" onclick="filterByStatus('PENDING')">
-            <i class="bi bi-hourglass-split"></i> Pending
-        </button>
-        <button class="btn btn-sm btn-outline-success" onclick="filterByStatus('APPROVED')">
-            <i class="bi bi-check-circle"></i> Approved
-        </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="filterByStatus('REJECTED')">
-            <i class="bi bi-x-circle"></i> Rejected
-        </button>
-        <button class="btn btn-sm btn-outline-primary" onclick="filterByStatus('COMPLETED')">
-            <i class="bi bi-check2-all"></i> Completed
-        </button>
+<!-- Filters -->
+<div class="card shadow-sm border-0 p-3 mb-4">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-8">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" class="form-control" placeholder="Search by asset, requester, or problem...">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select id="status-filter" class="form-select">
+                <option value="">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="COMPLETED">Completed</option>
+            </select>
+        </div>
     </div>
 </div>
 
@@ -49,17 +49,17 @@
 <div class="card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr class="border-bottom">
-                    <th class="text-muted small fw-600 ps-3">Asset</th>
+            <thead class="table-dark">
+                <tr>
+                    <th class="ps-3">Asset</th>
                     {% if request.user.is_manager or request.user.is_auditor %}
-                    <th class="text-muted small fw-600">Requested By</th>
+                    <th>Requested By</th>
                     {% endif %}
-                    <th class="text-muted small fw-600">Problem</th>
-                    <th class="text-muted small fw-600">Date</th>
-                    <th class="text-muted small fw-600">Status</th>
+                    <th>Problem</th>
+                    <th>Date</th>
+                    <th>Status</th>
                     {% if request.user.is_manager %}
-                    <th class="text-muted small fw-600">Actions</th>
+                    <th>Actions</th>
                     {% endif %}
                 </tr>
             </thead>
@@ -111,11 +111,6 @@
 {% endif %}
 
 <style>
-    .table thead th {
-        background-color: #f8f9fa;
-        border-top: none;
-    }
-
     .table tbody tr {
         border-bottom: 1px solid #e9ecef;
         transition: background-color 0.2s ease;
@@ -151,67 +146,95 @@
 
 {% block scripts %}
 <script>
-    let currentStatusFilter = '';
+    let allRequests = [];
 
-    async function loadRequests() {
-        let url = '/api/maintenance/requests/?';
-        if (currentStatusFilter) url += `status=${currentStatusFilter}&`;
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
 
-        const response = await fetch(url, { credentials: 'same-origin' });
-        const data = await response.json();
-        const tbody = document.getElementById('requests-table-body');
+    function truncate(text, max) {
+        if (!text) return '';
+        const safe = String(text);
+        return safe.length > max ? safe.substring(0, max) + '…' : safe;
+    }
 
-        if (!data.results || data.results.length === 0) {
+    function buildRequestRow(req) {
+        const assetName = req.asset ? req.asset.asset_name : '-';
+        const problem   = req.problem_description || '';
+        const actionsCell = {% if request.user.is_manager %}`
+            <td>
+                <div class="action-buttons">
+                    ${req.status === 'PENDING' ? `
+                        <button class="btn btn-success btn-sm" onclick="approveRequest(${req.id})" title="Approve this request">
+                            <i class="bi bi-check"></i> Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="rejectRequest(${req.id})" title="Reject this request">
+                            <i class="bi bi-x"></i> Reject
+                        </button>
+                    ` : '<small class="text-muted">—</small>'}
+                </div>
+            </td>`{% else %}''{% endif %};
+        return `
+            <tr>
+                <td class="ps-3"><strong>${escapeHtml(assetName)}</strong></td>
+                {% if request.user.is_manager or request.user.is_auditor %}
+                <td><small class="text-muted">${escapeHtml(req.requested_by || '-')}</small></td>
+                {% endif %}
+                <td><small>${escapeHtml(truncate(problem, 45))}</small></td>
+                <td><small class="text-muted">${req.date_requested ? escapeHtml(req.date_requested.substring(0,10)) : '-'}</small></td>
+                <td>
+                    <span class="status-badge ${getStatusClass(req.status)}">
+                        ${getStatusIcon(req.status)} ${escapeHtml(req.status || '')}
+                    </span>
+                </td>
+                ${actionsCell}
+            </tr>
+        `;
+    }
+
+    function renderRequests() {
+        const search = (document.getElementById('search-input').value || '').toLowerCase().trim();
+        const status = document.getElementById('status-filter').value;
+        const tbody  = document.getElementById('requests-table-body');
+
+        const filtered = (allRequests || []).filter(req => {
+            if (status && req.status !== status) return false;
+            if (search) {
+                const haystack = [
+                    req.asset ? req.asset.asset_name : '',
+                    req.requested_by || '',
+                    req.problem_description || '',
+                    req.status || '',
+                ].join(' ').toLowerCase();
+                if (!haystack.includes(search)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center text-muted py-5">
-                        <i class="bi bi-inbox"></i> No requests found.
+                        <i class="bi bi-inbox"></i> No requests match your search.
                     </td>
                 </tr>`;
             return;
         }
-
-        tbody.innerHTML = data.results.map(req => `
-            <tr>
-                <td class="ps-3"><strong>${req.asset ? req.asset.asset_name : '-'}</strong></td>
-                {% if request.user.is_manager or request.user.is_auditor %}
-                <td><small class="text-muted">${req.requested_by || '-'}</small></td>
-                {% endif %}
-                <td><small>${req.problem_description.substring(0, 45)}${req.problem_description.length > 45 ? '...' : ''}</small></td>
-                <td><small class="text-muted">${req.date_requested ? req.date_requested.substring(0,10) : '-'}</small></td>
-                <td>
-                    <span class="status-badge ${getStatusClass(req.status)}">
-                        ${getStatusIcon(req.status)} ${req.status}
-                    </span>
-                </td>
-                {% if request.user.is_manager %}
-                <td>
-                    <div class="action-buttons">
-                        ${req.status === 'PENDING' ? `
-                            <button class="btn btn-success btn-sm" onclick="approveRequest(${req.id})" title="Approve this request">
-                                <i class="bi bi-check"></i> Approve
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="rejectRequest(${req.id})" title="Reject this request">
-                                <i class="bi bi-x"></i> Reject
-                            </button>
-                        ` : '<small class="text-muted">—</small>'}
-                    </div>
-                </td>
-                {% endif %}
-            </tr>
-        `).join('');
+        tbody.innerHTML = filtered.map(buildRequestRow).join('');
     }
 
-    function filterByStatus(status) {
-        currentStatusFilter = status;
-        
-        // Update button states
-        document.querySelectorAll('.btn-outline-secondary, .btn-outline-warning, .btn-outline-success, .btn-outline-danger, .btn-outline-primary').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        event.target.closest('button').classList.add('active');
-        
-        loadRequests();
+    async function loadRequests() {
+        try {
+            const response = await fetch('/api/maintenance/requests/?', { credentials: 'same-origin' });
+            const data = await response.json();
+            allRequests = data.results || [];
+            renderRequests();
+        } catch (err) {
+            console.error('Error loading requests:', err);
+        }
     }
 
     function getStatusClass(status) {
@@ -363,6 +386,10 @@
         }
         return cookieValue;
     }
+
+    // Live search + status filter
+    document.getElementById('search-input').addEventListener('input', renderRequests);
+    document.getElementById('status-filter').addEventListener('change', renderRequests);
 
     loadAssets();
     loadRequests();
