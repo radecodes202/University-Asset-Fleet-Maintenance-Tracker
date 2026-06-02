@@ -1,0 +1,556 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ asset.asset_name }} | FleetTrack{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{% url 'assets' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to Assets
+            </a>
+            <div>
+                <h4 class="fw-bold mb-0">{{ asset.asset_name }}</h4>
+                <p class="text-muted small mb-0">Asset Details</p>
+            </div>
+        </div>
+        {% if request.user.is_manager %}
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning" id="edit-details-btn" data-bs-toggle="modal" data-bs-target="#editAssetModal">
+                <i class="bi bi-pencil"></i> Edit Details
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Image & Status -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center p-4">
+                {% if asset.asset_image %}
+                <img src="{{ asset.asset_image.url }}" alt="{{ asset.asset_name }}"
+                     class="img-fluid rounded mb-3" style="max-height: 250px; object-fit: contain; width: 100%; background-color: #f0f0f0; padding: 10px;">
+                {% else %}
+                <div class="d-flex align-items-center justify-content-center rounded mb-3"
+                     style="height: 250px; background-color: #f0f0f0;">
+                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                </div>
+                {% endif %}
+
+                <h5 class="fw-bold">{{ asset.asset_name }}</h5>
+                <p class="text-muted small mb-3">{{ asset.category }}</p>
+
+                <div id="status-display">
+                    <span class="status-badge {{ status_class }}" id="current-status-badge">
+                        <i class="bi {{ status_icon }}"></i> {{ asset.get_current_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {% if request.user.is_manager %}
+        <!-- Status Actions Card -->
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-gear"></i> Status Actions</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Change the current status of this asset:</p>
+                <div class="d-grid gap-2">
+                    {% if asset.current_status != 'ACTIVE' %}
+                    <button class="btn btn-outline-success status-change-btn" data-new-status="ACTIVE">
+                        <i class="bi bi-check-circle"></i> Set to Active
+                    </button>
+                    {% endif %}
+                    {% if asset.current_status != 'UNDER_MAINTENANCE' %}
+                    <button class="btn btn-outline-warning status-change-btn" data-new-status="UNDER_MAINTENANCE">
+                        <i class="bi bi-tools"></i> Set to Under Maintenance
+                    </button>
+                    {% endif %}
+                    {% if asset.current_status != 'RETIRED' %}
+                    <button class="btn btn-outline-secondary status-change-btn" data-new-status="RETIRED">
+                        <i class="bi bi-x-circle"></i> Set to Retired
+                    </button>
+                    {% endif %}
+                </div>
+                <div id="status-error" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Details -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-info-circle"></i> Asset Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold">Asset Name</label>
+                        <p class="fw-semibold mb-0">{{ asset.asset_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold">Serial Number</label>
+                        <p class="fw-semibold mb-0"><code>{{ asset.serial_number }}</code></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold">Category</label>
+                        <p class="fw-semibold mb-0">{{ asset.category }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold">Current Status</label>
+                        <p class="fw-semibold mb-0">
+                            <span class="status-badge {{ status_class }}">
+                                <i class="bi {{ status_icon }}"></i> {{ asset.get_current_status_display }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold">Purchase Date</label>
+                        <p class="fw-semibold mb-0">{{ asset.purchase_date|date:"F j, Y" }}</p>
+                    </div>
+                    {% if request.user.is_manager %}
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold">Purchase Cost</label>
+                        <p class="fw-semibold mb-0">₱{{ asset.purchase_cost|floatformat:2 }}</p>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold">Date Added</label>
+                        <p class="fw-semibold mb-0">{{ asset.date_added|date:"F j, Y g:i A" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold">Created By</label>
+                        <p class="fw-semibold mb-0">{{ asset.created_by|default:"-" }}</p>
+                    </div>
+                    {% if asset.notes %}
+                    <div class="col-12">
+                        <label class="text-muted small fw-semibold">Notes</label>
+                        <p class="mb-0">{{ asset.notes|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance History Preview -->
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0"><i class="bi bi-wrench"></i> Maintenance History</h6>
+            </div>
+            <div class="card-body" id="maintenance-history">
+                <div class="text-center text-muted py-3">
+                    <span class="spinner-border spinner-border-sm"></span> Loading maintenance records...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== Edit Asset Modal (Manager only) ===================== -->
+{% if request.user.is_manager %}
+<div class="modal fade" id="editAssetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil"></i> Edit Asset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label fw-semibold">Asset Name <span class="text-danger">*</span></label>
+                        <input type="text" id="edit-asset-name" class="form-control" value="{{ asset.asset_name }}">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Serial Number <span class="text-danger">*</span></label>
+                        <input type="text" id="edit-asset-serial" class="form-control" value="{{ asset.serial_number }}">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                        <select id="edit-asset-category" class="form-select">
+                            <option value="{{ asset.category.id }}">{{ asset.category.name }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Purchase Date <span class="text-danger">*</span></label>
+                        <input type="date" id="edit-asset-date" class="form-control" value="{{ asset.purchase_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Purchase Cost (₱) <span class="text-danger">*</span></label>
+                        <input type="number" id="edit-asset-cost" class="form-control" step="0.01" min="0" value="{{ asset.purchase_cost }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Status</label>
+                        <select id="edit-asset-status" class="form-select">
+                            <option value="ACTIVE" {% if asset.current_status == 'ACTIVE' %}selected{% endif %}>Active</option>
+                            <option value="UNDER_MAINTENANCE" {% if asset.current_status == 'UNDER_MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
+                            <option value="RETIRED" {% if asset.current_status == 'RETIRED' %}selected{% endif %}>Retired</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Image</label>
+                        <input type="file" id="edit-asset-image" class="form-control" accept="image/*">
+                        <small class="text-muted">Leave empty to keep current image.</small>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Notes</label>
+                        <textarea id="edit-asset-notes" class="form-control" rows="2">{{ asset.notes|default:'' }}</textarea>
+                    </div>
+                </div>
+                <div id="edit-asset-error" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-edit-asset-btn">
+                    <i class="bi bi-check2"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .status-badge.active { background-color: #d4edda; color: #155724; }
+    .status-badge.maintenance { background-color: #fff3cd; color: #856404; }
+    .status-badge.retired { background-color: #e2e3e5; color: #383d41; }
+
+    .history-item {
+        border-left: 3px solid #e9ecef;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    .history-item::before {
+        content: '';
+        width: 10px;
+        height: 10px;
+        background: #0d6efd;
+        border-radius: 50%;
+        position: absolute;
+        left: -6.5px;
+        top: 4px;
+    }
+    .history-item:last-child { margin-bottom: 0; }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const ASSET_ID = {{ asset.id }};
+    const IS_MANAGER = {% if request.user.is_manager %}true{% else %}false{% endif %};
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(cookie => {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.split('=')[1]);
+                }
+            });
+        }
+        return cookieValue;
+    }
+
+    function showSuccess(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+        alertDiv.style.zIndex = '9999';
+        alertDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        document.body.appendChild(alertDiv);
+        setTimeout(() => alertDiv.remove(), 3000);
+    }
+
+    function getStatusClass(status) {
+        const classes = { 'ACTIVE': 'active', 'UNDER_MAINTENANCE': 'maintenance', 'RETIRED': 'retired' };
+        return classes[status] || 'active';
+    }
+
+    function getStatusIcon(status) {
+        const icons = {
+            'ACTIVE': 'bi-check-circle',
+            'UNDER_MAINTENANCE': 'bi-tools',
+            'RETIRED': 'bi-x-circle',
+        };
+        return icons[status] || 'bi-circle';
+    }
+
+    function getStatusLabel(status) {
+        const labels = {
+            'ACTIVE': 'Active',
+            'UNDER_MAINTENANCE': 'Under Maintenance',
+            'RETIRED': 'Retired',
+        };
+        return labels[status] || status;
+    }
+
+    // ============================================================
+    // Status Change
+    // ============================================================
+    document.querySelectorAll('.status-change-btn').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const newStatus = this.dataset.newStatus;
+            const errEl = document.getElementById('status-error');
+
+            if (!confirm('Are you sure you want to change the status to "' + getStatusLabel(newStatus) + '"?')) return;
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Updating…';
+            errEl.classList.add('d-none');
+
+            try {
+                const response = await fetch('/api/assets/' + ASSET_ID + '/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ current_status: newStatus }),
+                });
+
+                if (response.ok) {
+                    showSuccess('Status updated to "' + getStatusLabel(newStatus) + '".');
+
+                    // Update all status badges on the page
+                    const newClass = getStatusClass(newStatus);
+                    const newIcon = getStatusIcon(newStatus);
+                    const newLabel = getStatusLabel(newStatus);
+
+                    document.querySelectorAll('.status-badge').forEach(badge => {
+                        badge.className = 'status-badge ' + newClass;
+                        badge.innerHTML = '<i class="bi ' + newIcon + '"></i> ' + newLabel;
+                    });
+
+                    // Rebuild status action buttons
+                    const actionsContainer = document.querySelector('.d-grid.gap-2');
+                    if (actionsContainer) {
+                        let html = '';
+                        if (newStatus !== 'ACTIVE') {
+                            html += '<button class="btn btn-outline-success status-change-btn" data-new-status="ACTIVE"><i class="bi bi-check-circle"></i> Set to Active</button>';
+                        }
+                        if (newStatus !== 'UNDER_MAINTENANCE') {
+                            html += '<button class="btn btn-outline-warning status-change-btn" data-new-status="UNDER_MAINTENANCE"><i class="bi bi-tools"></i> Set to Under Maintenance</button>';
+                        }
+                        if (newStatus !== 'RETIRED') {
+                            html += '<button class="btn btn-outline-secondary status-change-btn" data-new-status="RETIRED"><i class="bi bi-x-circle"></i> Set to Retired</button>';
+                        }
+                        actionsContainer.innerHTML = html;
+
+                        // Re-bind event listeners
+                        actionsContainer.querySelectorAll('.status-change-btn').forEach(b => {
+                            b.addEventListener('click', arguments.callee);
+                        });
+                    }
+
+                    // Update status dropdown in edit modal if open
+                    const editStatusEl = document.getElementById('edit-asset-status');
+                    if (editStatusEl) editStatusEl.value = newStatus;
+
+                } else {
+                    const err = await response.json().catch(() => ({}));
+                    errEl.textContent = err.detail || 'Failed to update status.';
+                    errEl.classList.remove('d-none');
+                }
+            } catch (err) {
+                errEl.textContent = 'Network error: ' + err.message;
+                errEl.classList.remove('d-none');
+            } finally {
+                // Re-enable buttons
+                document.querySelectorAll('.status-change-btn').forEach(b => {
+                    b.disabled = false;
+                });
+                // Reset button text
+                document.querySelectorAll('.status-change-btn').forEach(b => {
+                    const s = b.dataset.newStatus;
+                    b.innerHTML = '<i class="bi ' + getStatusIcon(s) + '"></i> Set to ' + getStatusLabel(s);
+                });
+            }
+        });
+    });
+
+    // ============================================================
+    // Edit Asset (PATCH /api/assets/:id/)
+    // ============================================================
+    {% if request.user.is_manager %}
+    async function populateEditCategoryDropdown() {
+        const select = document.getElementById('edit-asset-category');
+        if (!select) return;
+        try {
+            const response = await fetch('/api/assets/categories/', { credentials: 'same-origin' });
+            const data = await response.json();
+            const currentId = select.value;
+            select.innerHTML = '<option value="">Select a category…</option>';
+            if (data.results) {
+                data.results.forEach(cat => {
+                    const selected = String(cat.id) === String(currentId) ? ' selected' : '';
+                    select.innerHTML += '<option value="' + cat.id + '"' + selected + '>' + cat.name + '</option>';
+                });
+            }
+        } catch (err) { console.error('Error loading categories:', err); }
+    }
+
+    async function submitEditAsset() {
+        const nameEl     = document.getElementById('edit-asset-name');
+        const serialEl   = document.getElementById('edit-asset-serial');
+        const categoryEl = document.getElementById('edit-asset-category');
+        const dateEl     = document.getElementById('edit-asset-date');
+        const costEl     = document.getElementById('edit-asset-cost');
+        const statusEl   = document.getElementById('edit-asset-status');
+        const imageEl    = document.getElementById('edit-asset-image');
+        const notesEl    = document.getElementById('edit-asset-notes');
+        const errEl      = document.getElementById('edit-asset-error');
+        const btn        = document.getElementById('save-edit-asset-btn');
+
+        const name     = (nameEl.value || '').trim();
+        const serial   = (serialEl.value || '').trim();
+        const category = categoryEl.value;
+        const date     = dateEl.value;
+        const cost     = costEl.value;
+
+        if (!name || !serial || !category || !date || !cost) {
+            errEl.textContent = 'Please fill in all required fields.';
+            errEl.classList.remove('d-none');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving…';
+        errEl.classList.add('d-none');
+
+        let body, headers;
+        if (imageEl.files && imageEl.files[0]) {
+            const fd = new FormData();
+            fd.append('asset_name', name);
+            fd.append('serial_number', serial);
+            fd.append('category_id', category);
+            fd.append('purchase_date', date);
+            fd.append('purchase_cost', cost);
+            fd.append('current_status', statusEl.value);
+            if ((notesEl.value || '').trim()) fd.append('notes', notesEl.value.trim());
+            fd.append('asset_image', imageEl.files[0]);
+            body = fd;
+            headers = { 'X-CSRFToken': getCookie('csrftoken') };
+        } else {
+            body = JSON.stringify({
+                asset_name: name,
+                serial_number: serial,
+                category_id: parseInt(category, 10),
+                purchase_date: date,
+                purchase_cost: cost,
+                current_status: statusEl.value,
+                notes: (notesEl.value || '').trim() || null,
+            });
+            headers = {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            };
+        }
+
+        try {
+            const response = await fetch('/api/assets/' + ASSET_ID + '/', {
+                method: 'PATCH',
+                headers: headers,
+                credentials: 'same-origin',
+                body: body,
+            });
+
+            if (response.ok) {
+                showSuccess('Asset updated successfully.');
+                bootstrap.Modal.getInstance(document.getElementById('editAssetModal')).hide();
+                // Reload page to reflect changes
+                setTimeout(() => location.reload(), 500);
+            } else {
+                const err = await response.json().catch(() => ({}));
+                errEl.textContent = Object.values(err).flat().join(' ') || 'Failed to update asset.';
+                errEl.classList.remove('d-none');
+            }
+        } catch (err) {
+            errEl.textContent = 'Network error: ' + err.message;
+            errEl.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2"></i> Save Changes';
+        }
+    }
+    {% endif %}
+
+    // ============================================================
+    // Load Maintenance History
+    // ============================================================
+    async function loadMaintenanceHistory() {
+        const container = document.getElementById('maintenance-history');
+        try {
+            const response = await fetch('/api/maintenance/?asset=' + ASSET_ID, { credentials: 'same-origin' });
+            const data = await response.json();
+            const records = data.results || [];
+
+            if (records.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3"><i class="bi bi-inbox"></i> No maintenance records found.</div>';
+                return;
+            }
+
+            let html = '';
+            records.slice(0, 5).forEach(record => {
+                const date = new Date(record.date_reported || record.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                });
+                const statusClass = record.status === 'COMPLETED' ? 'active' : record.status === 'IN_PROGRESS' ? 'maintenance' : 'retired';
+                html += '<div class="history-item">' +
+                    '<div class="d-flex justify-content-between align-items-start">' +
+                    '<div>' +
+                    '<p class="fw-semibold mb-1">' + (record.description || 'Maintenance Record') + '</p>' +
+                    '<small class="text-muted">' + date + '</small>' +
+                    '</div>' +
+                    '<span class="status-badge ' + statusClass + '" style="font-size: 0.75rem;">' + (record.status || '-') + '</span>' +
+                    '</div>' +
+                    '</div>';
+            });
+
+            if (records.length > 5) {
+                html += '<div class="text-center mt-2"><a href="{% url \'maintenance:history\' %}?asset=' + ASSET_ID + '" class="small">View all ' + records.length + ' records →</a></div>';
+            }
+
+            container.innerHTML = html;
+        } catch (err) {
+            container.innerHTML = '<div class="text-center text-muted py-3"><i class="bi bi-inbox"></i> No maintenance records found.</div>';
+        }
+    }
+
+    // ============================================================
+    // Init
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function () {
+        loadMaintenanceHistory();
+
+        {% if request.user.is_manager %}
+        const editBtn = document.getElementById('save-edit-asset-btn');
+        if (editBtn) editBtn.addEventListener('click', submitEditAsset);
+
+        const editModal = document.getElementById('editAssetModal');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function () {
+                populateEditCategoryDropdown();
+            });
+        }
+        {% endif %});
+</script>
+{% endblock %}

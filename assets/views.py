@@ -112,3 +112,22 @@ class AssetDetailView(generics.RetrieveUpdateDestroyAPIView):
 @login_required(login_url='/login/')
 def assets_page(request):
     return render(request, 'assets/assets.html')
+
+
+@login_required(login_url='/login/')
+def asset_detail_page(request, pk):
+    from django.shortcuts import get_object_or_404
+    asset = get_object_or_404(Asset, pk=pk)
+
+    status_map = {
+        'ACTIVE': ('active', 'bi-check-circle'),
+        'UNDER_MAINTENANCE': ('maintenance', 'bi-tools'),
+        'RETIRED': ('retired', 'bi-x-circle'),
+    }
+    status_class, status_icon = status_map.get(asset.current_status, ('active', 'bi-circle'))
+
+    return render(request, 'assets/asset_detail.html', {
+        'asset': asset,
+        'status_class': status_class,
+        'status_icon': status_icon,
+    })

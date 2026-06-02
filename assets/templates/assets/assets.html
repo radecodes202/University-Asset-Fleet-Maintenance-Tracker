@@ -250,7 +250,7 @@
         const costCell = IS_MANAGER
             ? '<td class="text-end pe-3 cost-col"><span class="badge bg-light text-dark">₱' + cost + '</span></td>'
             : '';
-        return '<tr>' +
+        return '<tr style="cursor: pointer;" onclick="window.location=\'/api/assets/page/' + asset.id + '/\'">' +
             '<td class="ps-3">' + imageCell + '</td>' +
             '<td><strong><i class="bi bi-box2"></i> ' + escapeHtml(asset.asset_name) + '</strong></td>' +
             '<td><small class="text-muted">' + escapeHtml(asset.category ? asset.category.name : '-') + '</small></td>' +
