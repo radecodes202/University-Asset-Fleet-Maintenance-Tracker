@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django_filters',
     'cloudinary',
     'cloudinary_storage',
+    'axes',
 
     # Local apps
     'accounts',
@@ -45,6 +46,20 @@ INSTALLED_APPS = [
     'dashboard',
     'audit',
 ]
+
+# django-axes: active defense against brute-force logins
+# docs: https://django-axes.readthedocs.io/
+# We use axes' AxesStandaloneBackend to wrap the project's
+# FailedLoginTrackingBackend so both layers (IP lockout + audit log) fire.
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 5                # max failed attempts before lockout
+AXES_COOLOFF_TIME = timedelta(minutes=10)  # lockout duration
+AXES_RESET_ON_SUCCESS = True          # reset counter after a successful login
+AXES_LOCKOUT_PARAMETERS = ['ip_address']  # lock by IP (not username) to prevent
+                                          # username-based enumeration attacks
+AXES_ENABLE_ACCESS_FAILURE_LOG = True  # log every failure for the audit team
+AXES_VERBOSE_LOG = True
+AXES_HANDLER = 'axes.handlers.database.AxesDatabaseHandler'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -56,6 +71,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',  # must be LAST in middleware
 ]
 
 ROOT_URLCONF = 'enterprise_tracker.urls'
@@ -213,6 +229,10 @@ SECURE_CONTENT_SECURITY_POLICY = {
     'upgrade-insecure-requests': (),                         # HTTP → HTTPS redirect
 }
 
+# Axes wraps our custom backend so both layers fire:
+#   1. axes: IP-based lockout (AccessAttempt tracking + cool-off)
+#   2. FailedLoginTrackingBackend: per-user lockout + audit-log writes
 AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
     'accounts.views.FailedLoginTrackingBackend',
 ]
