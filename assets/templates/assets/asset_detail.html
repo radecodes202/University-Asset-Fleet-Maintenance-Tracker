@@ -526,7 +526,7 @@
             });
 
             if (records.length > 5) {
-                html += '<div class="text-center mt-2"><a href="{% url \'maintenance:history\' %}?asset=' + ASSET_ID + '" class="small">View all ' + records.length + ' records →</a></div>';
+                html += '<div class="text-center mt-2"><a href="{% url "maintenance:history" %}?asset=' + ASSET_ID + '" class="small">View all ' + records.length + ' records →</a></div>';
             }
 
             container.innerHTML = html;
