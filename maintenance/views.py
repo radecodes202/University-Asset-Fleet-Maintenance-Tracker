@@ -26,7 +26,7 @@ class MaintenanceRequestListCreateView(generics.ListCreateAPIView):
 
         if user.is_manager or user.is_auditor:
             return MaintenanceRequest.objects.all()
-        
+
         return MaintenanceRequest.objects.filter(requested_by=user)
 
     def perform_create(self, serializer):
@@ -144,9 +144,9 @@ class WorkOrderListCreateView(generics.ListCreateAPIView):
         if not self.request.user.is_manager:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Only Managers can create work orders.')
-        
+
         work_order = serializer.save()
-    
+
         # Automatically set asset to UNDER_MAINTENANCE
         asset = work_order.maintenance_request.asset
         asset.current_status = 'UNDER_MAINTENANCE'
@@ -229,8 +229,7 @@ class WorkOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
             )
 
         return Response(serializer.data)
-    
-    
+
 
 
 class MaintenanceHistoryListView(generics.ListAPIView):
@@ -240,7 +239,7 @@ class MaintenanceHistoryListView(generics.ListAPIView):
         if self.request.user.is_manager:
             return ManagerMaintenanceHistorySerializer
         return StaffMaintenanceHistorySerializer
-    
+
     def get_queryset(self):
         user = self.request.user
 
@@ -251,20 +250,50 @@ class MaintenanceHistoryListView(generics.ListAPIView):
             asset__maintenance_requests__requested_by=user
         )
 
+
+class TechnicianListView(generics.ListAPIView):
+    """
+    Lightweight endpoint used by the Create Work Order modal to populate
+    the technician <select>. Returns active, non-auditor users as a flat
+    list of {id, name, email, role} objects (no pagination wrapper) so
+    it can be consumed directly by the frontend.
+    """
+    permission_classes = [IsManager]
+
+    def list(self, request, *args, **kwargs):
+        from accounts.models import User
+        qs = (
+            User.objects
+            .filter(is_active=True)
+            .exclude(role='AUDITOR')
+            .order_by('first_name', 'last_name')
+        )
+        data = [
+            {
+                'id':    u.id,
+                'name':  u.get_full_name().strip() or u.email,
+                'email': u.email,
+                'role':  u.get_role_display() if hasattr(u, 'get_role_display') else u.role,
+            }
+            for u in qs
+        ]
+        return Response(data)
+
+
 @login_required(login_url='/login/')
 def export_maintenance_history_csv(request):
     """Export maintenance history to CSV"""
     if not (request.user.is_manager or request.user.is_auditor):
         return HttpResponse('Unauthorized', status=403)
-    
+
     # Create response object
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="maintenance_history_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
-    
+
     # Create CSV writer
     writer = csv.writer(response)
     writer.writerow(['Date', 'Asset Name', 'Work Order ID', 'Maintenance Cost', 'Completed By', 'Remarks'])
-    
+
     # Get maintenance history based on user permissions
     if request.user.is_manager or request.user.is_auditor:
         histories = MaintenanceHistory.objects.select_related('asset', 'work_order', 'completed_by').all()
@@ -272,7 +301,7 @@ def export_maintenance_history_csv(request):
         histories = MaintenanceHistory.objects.filter(
             asset__maintenance_requests__requested_by=request.user
         ).select_related('asset', 'work_order', 'completed_by')
-    
+
     for history in histories.order_by('-timestamp'):
         writer.writerow([
             history.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
@@ -282,7 +311,7 @@ def export_maintenance_history_csv(request):
             history.completed_by.email if history.completed_by else 'Unknown',
             history.remarks or '',
         ])
-    
+
     return response
 
 @login_required(login_url='/login/')

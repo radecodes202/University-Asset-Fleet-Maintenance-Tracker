@@ -27,17 +27,28 @@ class MaintenanceRequestSerializer(serializers.ModelSerializer):
 
 class WorkOrderSerializer(serializers.ModelSerializer):
 
+    # Human-readable name of the assigned technician. Read-only.
+    assigned_technician_name = serializers.SerializerMethodField()
+
     class Meta:
         model = WorkOrder
         fields = [
                   'id',
                   'maintenance_request',
                   'assigned_technician',
+                  'assigned_technician_name',
                   'work_description',
                   'date_started',
                   'date_completed',
                   'status',
                   ]
+
+    def get_assigned_technician_name(self, obj):
+        tech = obj.assigned_technician
+        if not tech:
+            return None
+        full = tech.get_full_name().strip()
+        return full or tech.email
 
 class StaffMaintenanceHistorySerializer(serializers.ModelSerializer):
 

@@ -72,6 +72,7 @@
     .status-badge.cancelled { background-color: #e2e3e5; color: #383d41; }
     .action-buttons { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; }
     .action-buttons .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+    .tech-avatar { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background-color: #e9ecef; color: #495057; font-size: 0.7rem; font-weight: 700; margin-right: 0.4rem; }
 </style>
 
 {% if request.user.is_manager %}
@@ -92,7 +93,10 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Assign Technician</label>
-                    <input type="text" id="wo-technician" class="form-control" placeholder="Technician name or ID">
+                    <select id="wo-technician" class="form-select">
+                        <option value="">Select technician...</option>
+                    </select>
+                    <div class="form-text">Only active, non-auditor users are shown.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Work Description</label>
@@ -163,6 +167,13 @@
         const div = document.createElement('div');
         div.textContent = String(text);
         return div.innerHTML;
+    }
+
+    function getInitials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
     function getCookie(name) {
@@ -272,10 +283,15 @@
                     }
                     actionsCell = '<td class="pe-3 actions-col"><div class="action-buttons">' + buttons + '</div></td>';
                 }
+                // Prefer the human-readable name from the serializer; fall back to the raw ID.
+                const techName = wo.assigned_technician_name || (wo.assigned_technician ? '#' + wo.assigned_technician : null);
+                const techCell = techName
+                    ? '<td><span class="tech-avatar">' + escapeHtml(getInitials(techName)) + '</span><small>' + escapeHtml(techName) + '</small></td>'
+                    : '<td><small class="text-muted">—</small></td>';
                 return '<tr>' +
                     '<td class="ps-3"><strong><i class="bi bi-receipt"></i> WO-' + escapeHtml(wo.id) + '</strong></td>' +
                     '<td><small class="text-muted">' + (wo.maintenance_request ? 'MR-' + escapeHtml(wo.maintenance_request) : '-') + '</small></td>' +
-                    '<td><small>' + escapeHtml(wo.assigned_technician || '—') + '</small></td>' +
+                    techCell +
                     '<td><small class="text-muted">' + (wo.date_started ? escapeHtml(wo.date_started.substring(0,10)) : '—') + '</small></td>' +
                     '<td><span class="status-badge ' + getStatusClass(wo.status) + '">' + getStatusIcon(wo.status) + ' ' + escapeHtml((wo.status || '').replace(/_/g, ' ')) + '</span></td>' +
                     actionsCell +
@@ -300,6 +316,27 @@
         } catch (err) { console.error('Error loading approved requests:', err); }
     }
 
+    async function loadTechnicians() {
+        const select = document.getElementById('wo-technician');
+        if (!select) return;
+        try {
+            const response = await fetch('/api/maintenance/technicians/', { credentials: 'same-origin' });
+            if (!response.ok) {
+                console.error('Failed to load technicians:', response.status);
+                return;
+            }
+            const data = await response.json();
+            // Clear out the placeholder then append one <option> per user.
+            select.innerHTML = '<option value="">Select technician...</option>';
+            (data || []).forEach(t => {
+                const label = t.name + ' (' + t.role + ')';
+                select.innerHTML += '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(label) + '</option>';
+            });
+        } catch (err) {
+            console.error('Error loading technicians:', err);
+        }
+    }
+
     async function createWorkOrder() {
         const requestId   = document.getElementById('wo-request').value;
         const technician  = document.getElementById('wo-technician').value;
@@ -322,7 +359,7 @@
                 credentials: 'same-origin',
                 body: JSON.stringify({
                     maintenance_request: requestId,
-                    assigned_technician: technician,
+                    assigned_technician: technician || null,
                     work_description:    description,
                 }),
             });
@@ -330,7 +367,11 @@
             if (response.ok) {
                 bootstrap.Modal.getInstance(document.getElementById('createWorkOrderModal')).hide();
                 showSuccess('Work order created successfully!');
+                document.getElementById('wo-request').value = '';
+                document.getElementById('wo-technician').value = '';
+                document.getElementById('wo-description').value = '';
                 loadWorkOrders();
+                loadTechnicians();
             } else {
                 const err = await response.json();
                 errDiv.textContent = JSON.stringify(err);
@@ -370,6 +411,7 @@
 
     if (IS_MANAGER) {
         loadApprovedRequests();
+        loadTechnicians();
     }
     loadWorkOrders();
 </script>
