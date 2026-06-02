@@ -10,10 +10,37 @@
         <p class="text-muted small">Manage system users and roles</p>
     </div>
     {% if request.user.is_manager %}
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal" title="Create a new user account">
         + Add User
     </button>
     {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card shadow-sm border-0 p-3 mb-4">
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input type="text" id="search-input" class="form-control" placeholder="Search by name or email...">
+        </div>
+        <div class="col-md-3">
+            <select id="role-filter" class="form-select">
+                <option value="">All Roles</option>
+                <option value="STAFF">Standard Staff</option>
+                <option value="AUDITOR">Auditor</option>
+                <option value="MANAGER">Manager</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select id="status-filter" class="form-select">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-secondary w-100" onclick="loadUsers()">Filter</button>
+        </div>
+    </div>
 </div>
 
 <!-- Users Table -->
@@ -99,6 +126,18 @@
 {% block scripts %}
 <script>
     async function loadUsers() {
+        const search = document.getElementById('search-input').value;
+        const role   = document.getElementById('role-filter').value;
+        const status = document.getElementById('status-filter').value;
+
+        let url = '/api/accounts/users/list/?';
+        if (search) url += `search=${search}&`;
+        if (role)   url += `role=${role}&`;
+        if (status) {
+            const isActive = status === 'active' ? 'true' : 'false';
+            url += `is_active=${isActive}&`;
+        }
+
     document.getElementById('users-table-body').innerHTML = `
         <tr>
             <td colspan="6" class="text-center text-muted py-4">
@@ -106,7 +145,7 @@
             </td>
         </tr>`;
 
-    const response = await fetch('/api/accounts/users/list/', {
+    const response = await fetch(url, {
         credentials: 'same-origin',
     });
 

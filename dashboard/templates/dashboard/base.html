@@ -5,11 +5,96 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <title>{% block title %}base{% endblock %}</title>
     <style>
-    .nav-link:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .nav-link.active {
+            background-color: rgba(13, 110, 253, 0.25);
+            border-left: 3px solid #0d6efd;
+            padding-left: calc(0.75rem - 3px);
+        }
+
+        .sidebar-nav {
+            flex-grow: 1;
+        }
+
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .kpi-card {
+            border-left: 4px solid;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: currentColor;
+            opacity: 0.05;
+            border-radius: 50%;
+        }
+
+        .kpi-icon {
+            font-size: 2rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+
+        .trend-badge {
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .trend-up {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .trend-down {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #212529;
+        }
     </style>
 
 </head>
@@ -17,45 +102,54 @@
 
     <div class="d-flex"> 
         
-        <div class="bg-dark text-white vh-100 p-3 d-flex flex-column" style="width: 250px" >
+        <div class="bg-dark text-white vh-100 p-3 d-flex flex-column" style="width: 250px; box-shadow: 2px 0 5px rgba(0,0,0,0.1);">
 
-            <p class="fs-4 fw-bold mb-1">FleetTrack</p>
-            <p class="text-white small mb-4">University Asset System</p>
+            <div class="mb-4">
+                <p class="fs-4 fw-bold mb-0"><i class="bi bi-box-seam"></i> FleetTrack</p>
+                <p class="text-white-50 small">University Asset System</p>
+            </div>
+            
             <!--Sidebar -->
-            <ul class="sidebar-nav p-0 list-unstyled ">
+            <ul class="sidebar-nav p-0 list-unstyled">
                 <li class="sidebar-header">
-                    <a href="{% url 'dashboard' %}" class="nav-link text-white py-2 px-3 rounded mb-1">Dashboard</a>
+                    <a href="{% url 'dashboard' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
                 </li>
                 <li>
-                    <a href="{% url 'assets' %}" class="nav-link text-white py-2 px-3 rounded mb-1">Assets</a>
+                    <a href="{% url 'assets' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'assets' %}active{% endif %}">
+                        <i class="bi bi-box2"></i> Assets
+                    </a>
                 </li>
                 <li>
-                    <a href="{% url 'requests' %}" class="nav-link text-white py-2 px-3 rounded mb-1">Maintenance</a>
+                    <a href="{% url 'requests' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'requests' %}active{% endif %}">
+                        <i class="bi bi-wrench"></i> Maintenance
+                    </a>
                 </li>
                 <li>
-                    <a href="{% url 'history' %}" class="nav-link text-white py-2 px-3 rounded mb-1">
-                        History
+                    <a href="{% url 'history' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'history' %}active{% endif %}">
+                        <i class="bi bi-clock-history"></i> History
                     </a>
                 </li>
                 {% if user.is_manager %}
                 <li>
-                    <a href="{% url 'workorders' %}" class="nav-link text-white py-2 px-3 rounded mb-1">
-                        Work Orders
+                    <a href="{% url 'workorders' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'workorders' %}active{% endif %}">
+                        <i class="bi bi-clipboard-check"></i> Work Orders
                     </a>
                 </li>
                 <li>
-                    <a href="{% url 'users' %}" class="nav-link text-white py-2 px-3 rounded mb-1">
-                        Users
-                    </a>
-                </li>
-                <li>
-                    <a href="{% url 'audit:logs-page' %}" class="nav-link text-white py-2 px-3 rounded mb-1">
-                        Audit Logs
+                    <a href="{% url 'users' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'users' %}active{% endif %}">
+                        <i class="bi bi-people"></i> Users
                     </a>
                 </li>
                 {% endif %}
-
-               
+                {% if user.is_manager or user.is_auditor %}
+                <li>
+                    <a href="{% url 'audit:logs-page' %}" class="nav-link text-white py-2 px-3 rounded mb-1 {% if request.resolver_match.url_name == 'logs-page' %}active{% endif %}">
+                        <i class="bi bi-file-earmark-text"></i> Audit Logs
+                    </a>
+                </li>
+                {% endif %}
             </ul>
 
             <div class="mt-auto border-top pt-3">
@@ -63,7 +157,7 @@
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-light btn-sm w-100">
-                        Logout
+                        <i class="bi bi-box-arrow-right"></i> Logout
                     </button>
                 </form>
             </div>
@@ -78,6 +172,7 @@
     </div>
 
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     {% block scripts %}
     {% endblock %}
 </body>

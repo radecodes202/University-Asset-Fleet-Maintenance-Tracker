@@ -12,6 +12,9 @@ from .serializers import (
     StaffMaintenanceHistorySerializer,
     ManagerMaintenanceHistorySerializer,
 )
+import csv
+from django.http import HttpResponse
+from datetime import datetime
 
 
 class MaintenanceRequestListCreateView(generics.ListCreateAPIView):
@@ -247,6 +250,40 @@ class MaintenanceHistoryListView(generics.ListAPIView):
         return MaintenanceHistory.objects.filter(
             asset__maintenance_requests__requested_by=user
         )
+
+@login_required(login_url='/login/')
+def export_maintenance_history_csv(request):
+    """Export maintenance history to CSV"""
+    if not (request.user.is_manager or request.user.is_auditor):
+        return HttpResponse('Unauthorized', status=403)
+    
+    # Create response object
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="maintenance_history_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    # Create CSV writer
+    writer = csv.writer(response)
+    writer.writerow(['Date', 'Asset Name', 'Work Order ID', 'Maintenance Cost', 'Completed By', 'Remarks'])
+    
+    # Get maintenance history based on user permissions
+    if request.user.is_manager or request.user.is_auditor:
+        histories = MaintenanceHistory.objects.select_related('asset', 'work_order', 'completed_by').all()
+    else:
+        histories = MaintenanceHistory.objects.filter(
+            asset__maintenance_requests__requested_by=request.user
+        ).select_related('asset', 'work_order', 'completed_by')
+    
+    for history in histories.order_by('-timestamp'):
+        writer.writerow([
+            history.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            history.asset.asset_name,
+            f'WO-{history.work_order.id}',
+            f'₱{history.maintenance_cost:,.2f}',
+            history.completed_by.email if history.completed_by else 'Unknown',
+            history.remarks or '',
+        ])
+    
+    return response
 
 @login_required(login_url='/login/')
 def requests_page(request):

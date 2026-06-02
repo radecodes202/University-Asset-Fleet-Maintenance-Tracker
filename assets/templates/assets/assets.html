@@ -4,44 +4,56 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="fw-bold mb-0">Assets</h4>
-        <p class="text-muted small">Manage university assets and equipment</p>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold mb-0">Assets</h4>
+            <p class="text-muted small mb-0">Manage university assets and equipment</p>
+        </div>
+        {% if request.user.is_manager %}
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssetModal" title="Create a new asset record">
+                <i class="bi bi-plus-circle"></i> Add Asset
+            </button>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal" title="Create a new asset category">
+                <i class="bi bi-tag"></i> Category
+            </button>
+        </div>
+        {% endif %}
     </div>
-    {% if request.user.is_manager %}
-    <div>
-        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addAssetModal">
-            + Add Asset
-        </button>
-        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-            + Category
-        </button>
-    </div>
-    {% endif %}
 </div>
 
-<!-- Filters -->
+<!-- Status Filter Pills -->
+<div class="mb-4">
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-sm btn-outline-secondary active" onclick="filterByStatus('')">
+            <i class="bi bi-funnel"></i> All
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="filterByStatus('ACTIVE')">
+            <i class="bi bi-check-circle"></i> Active
+        </button>
+        <button class="btn btn-sm btn-outline-warning" onclick="filterByStatus('UNDER_MAINTENANCE')">
+            <i class="bi bi-tools"></i> Under Maintenance
+        </button>
+        <button class="btn btn-sm btn-outline-danger" onclick="filterByStatus('RETIRED')">
+            <i class="bi bi-x-circle"></i> Retired
+        </button>
+    </div>
+</div>
+
+<!-- Search and Filter Row -->
 <div class="card shadow-sm border-0 p-3 mb-4">
     <div class="row g-2">
-        <div class="col-md-4">
-            <input type="text" id="search-input" class="form-control" placeholder="Search asset name...">
+        <div class="col-md-5">
+            <input type="text" id="search-input" class="form-control" placeholder="Search asset name or serial number...">
         </div>
-        <div class="col-md-3">
-            <select id="status-filter" class="form-select">
-                <option value="">All Statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="UNDER_MAINTENANCE">Under Maintenance</option>
-                <option value="RETIRED">Retired</option>
-            </select>
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-5">
             <select id="category-filter" class="form-select">
                 <option value="">All Categories</option>
             </select>
         </div>
         <div class="col-md-2">
-            <button class="btn btn-secondary w-100" onclick="loadAssets()">Filter</button>
+            <button class="btn btn-secondary w-100" onclick="loadAssets()"><i class="bi bi-search"></i> Search</button>
         </div>
     </div>
 </div>
@@ -50,23 +62,22 @@
 <div class="card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-dark">
-                <tr>
-                    <th>Image</th>
-                    <th>Asset Name</th>
-                    <th>Category</th>
-                    <th>Serial Number</th>
-                    <th>Status</th>
-                    <th>Date Added</th>
+            <thead class="table-light">
+                <tr class="border-bottom">
+                    <th class="text-muted small fw-600 ps-3">Image</th>
+                    <th class="text-muted small fw-600">Asset Name</th>
+                    <th class="text-muted small fw-600">Category</th>
+                    <th class="text-muted small fw-600">Serial Number</th>
+                    <th class="text-muted small fw-600">Status</th>
                     {% if request.user.is_manager %}
-                    <th>Purchase Cost</th>
+                    <th class="text-muted small fw-600 text-end pe-3">Cost</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody id="assets-table-body">
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
-                        Loading assets...
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="bi bi-hourglass-split"></i> Loading assets...
                     </td>
                 </tr>
             </tbody>
@@ -74,80 +85,43 @@
     </div>
 </div>
 
-<!-- Add Asset Modal -->
-{% if request.user.is_manager %}
-<div class="modal fade" id="addAssetModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold">Add New Asset</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Asset Name</label>
-                    <input type="text" id="asset-name" class="form-control" placeholder="e.g. Toyota HiAce">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Category</label>
-                    <div class="input-group">
-                        <select id="asset-category" class="form-select">
-                            <option value="">Select category...</option>
-                        </select>
-                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#addCategoryModal" onclick="setReturnToAssetModal(true)">
-                            <i class="bi bi-plus-lg"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Serial Number</label>
-                    <input type="text" id="asset-serial" class="form-control" placeholder="e.g. TH-2024-001">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Purchase Date</label>
-                    <input type="date" id="asset-purchase-date" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Purchase Cost (₱)</label>
-                    <input type="number" id="asset-cost" class="form-control" placeholder="e.g. 1500000">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Asset Image</label>
-                    <input type="file" id="asset-image" class="form-control" accept="image/*">
-                </div>
-                <div id="asset-error" class="alert alert-danger d-none"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="addAsset()">Add Asset</button>
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+    .table thead th {
+        background-color: #f8f9fa;
+        border-top: none;
+    }
 
-<!-- Add Category Modal -->
-<div class="modal fade" id="addCategoryModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold">Add New Category</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
-                    <input type="text" id="category-name" class="form-control" placeholder="e.g. Vehicles">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Description</label>
-                    <textarea id="category-description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
-                </div>
-                <div id="category-error" class="alert alert-danger d-none"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="addCategory()">Create Category</button>
-            </div>
+    .table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .asset-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+        background-color: #f0f0f0;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .status-badge.active { background-color: #d4edda; color: #155724; }
+    .status-badge.maintenance { background-color: #fff3cd; color: #856404; }
+    .status-badge.retired { background-color: #e2e3e5; color: #383d41; }
+</style>
         </div>
     </div>
 </div>
@@ -424,21 +398,306 @@
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
+{% block scripts %}
+<script>
+    let currentStatusFilter = '';
+
+    function filterByStatus(status) {
+        currentStatusFilter = status;
+        document.querySelectorAll('.page-header .btn-outline-secondary, .page-header .btn-outline-success, .page-header .btn-outline-warning, .page-header .btn-outline-danger').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.closest('button').classList.add('active');
+        loadAssets();
+    }
+
+    async function loadAssets() {
+        const searchInput = document.getElementById('search-input').value;
+        const categoryFilter = document.getElementById('category-filter').value;
+
+        let url = '/api/assets/?';
+        if (searchInput) url += `search=${searchInput}&`;
+        if (categoryFilter) url += `category=${categoryFilter}&`;
+        if (currentStatusFilter) url += `status=${currentStatusFilter}&`;
+
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+        });
+
+        const data = await response.json();
+        const tbody = document.getElementById('assets-table-body');
+
+        if (!data.results || data.results.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="bi bi-inbox"></i> No assets found.
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.results.map(asset => `
+            <tr>
+                <td class="ps-3">
+                    ${asset.asset_image ?
+                        `<img src="${asset.asset_image}" class="asset-image">`
+                        : '<span class="text-muted small"><i class="bi bi-image"></i> No image</span>'}
+                </td>
+                <td><strong><i class="bi bi-box2"></i> ${asset.asset_name}</strong></td>
+                <td><small class="text-muted">${asset.category ? asset.category.name : '-'}</small></td>
+                <td><small class="text-muted">${asset.serial_number}</small></td>
+                <td>
+                    <span class="status-badge ${getStatusClass(asset.current_status)}">
+                        ${getStatusIcon(asset.current_status)} ${asset.current_status.replace(/_/g, ' ')}
+                    </span>
+                </td>
+                {% if request.user.is_manager %}
+                <td class="text-end pe-3">
+                    <span class="badge bg-light text-dark">₱${Number(asset.purchase_cost).toLocaleString('en-PH', {maximumFractionDigits: 0})}</span>
+                </td>
+                {% endif %}
+            </tr>
+        `).join('');
+    }
+
+    function getStatusClass(status) {
+        const classes = {
+            'ACTIVE': 'active',
+            'UNDER_MAINTENANCE': 'maintenance',
+            'RETIRED': 'retired',
+        };
+        return classes[status] || 'active';
+    }
+
+    function getStatusIcon(status) {
+        const icons = {
+            'ACTIVE': '<i class="bi bi-check-circle"></i>',
+            'UNDER_MAINTENANCE': '<i class="bi bi-tools"></i>',
+            'RETIRED': '<i class="bi bi-x-circle"></i>',
+        };
+        return icons[status] || '<i class="bi bi-circle"></i>';
+    }
+
+    async function loadCategories() {
+        const response = await fetch('/api/assets/categories/', {
+            credentials: 'same-origin',
+        });
+        const data = await response.json();
+        const select = document.getElementById('category-filter');
+        if (data.results) {
+            data.results.forEach(cat => {
+                select.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+            });
+        }
+    }
+
+    async function populateModalCategories() {
+        const response = await fetch('/api/assets/categories/', {
+            credentials: 'same-origin',
+        });
+        const data = await response.json();
+        const select = document.getElementById('asset-category');
+        if (select && data.results) {
+            data.results.forEach(cat => {
+                select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+            });
+        }
+    }
+
+    async function addAsset() {
+        const name         = document.getElementById('asset-name').value;
+        const category     = document.getElementById('asset-category').value;
+        const serial       = document.getElementById('asset-serial').value;
+        const purchaseDate = document.getElementById('asset-purchase-date').value;
+        const cost         = document.getElementById('asset-cost').value;
+        const imageFile    = document.getElementById('asset-image').files[0];
+        const errDiv       = document.getElementById('asset-error');
+
+        if (!name || !category || !serial || !purchaseDate || !cost) {
+            errDiv.textContent = 'Please fill in all required fields.';
+            errDiv.classList.remove('d-none');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('asset_name',    name);
+        formData.append('category_id',   category);
+        formData.append('serial_number', serial);
+        formData.append('purchase_date', purchaseDate);
+        formData.append('purchase_cost', cost);
+        if (imageFile) {
+            formData.append('asset_image', imageFile);
+        }
+
+        const response = await fetch('/api/assets/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            credentials: 'same-origin',
+            body: formData,
+        });
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(
+                document.getElementById('addAssetModal')
+            ).hide();
+            showSuccess('Asset created successfully!');
+            loadAssets();
+        } else {
+            const err = await response.json();
+            errDiv.textContent = JSON.stringify(err);
+            errDiv.classList.remove('d-none');
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(cookie => {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.split('=')[1]);
+                }
+            });
+        }
+        return cookieValue;
+    }
+
+    let returnToAssetModal = false;
+    let newlyCreatedCategoryId = null;
+
+    function setReturnToAssetModal(value) {
+        returnToAssetModal = value;
+    }
+
+    async function refreshCategoryDropdowns() {
+        const response = await fetch('/api/assets/categories/', {
+            credentials: 'same-origin',
+        });
+        const data = await response.json();
+        
+        const filterSelect = document.getElementById('category-filter');
+        if (filterSelect) {
+            const currentValue = filterSelect.value;
+            filterSelect.innerHTML = '<option value="">All Categories</option>';
+            if (data.results) {
+                data.results.forEach(cat => {
+                    filterSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+                });
+            }
+            filterSelect.value = currentValue;
+        }
+        
+        const assetSelect = document.getElementById('asset-category');
+        if (assetSelect) {
+            const currentValue = assetSelect.value;
+            assetSelect.innerHTML = '<option value="">Select category...</option>';
+            if (data.results) {
+                data.results.forEach(cat => {
+                    assetSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+                });
+            }
+            if (newlyCreatedCategoryId) {
+                assetSelect.value = newlyCreatedCategoryId;
+                newlyCreatedCategoryId = null;
+            } else {
+                assetSelect.value = currentValue;
+            }
+        }
+    }
+
+    async function addCategory() {
+        const name = document.getElementById('category-name').value.trim();
+        const description = document.getElementById('category-description').value.trim();
+        const errDiv = document.getElementById('category-error');
+
+        if (!name) {
+            errDiv.textContent = 'Category name is required.';
+            errDiv.classList.remove('d-none');
+            return;
+        }
+
+        const response = await fetch('/api/assets/categories/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                name: name,
+                description: description
+            }),
+        });
+
+        if (response.ok) {
+            const newCategory = await response.json();
+            newlyCreatedCategoryId = newCategory.id;
+            
+            const categoryModal = bootstrap.Modal.getInstance(
+                document.getElementById('addCategoryModal')
+            );
+            if (categoryModal) {
+                categoryModal.hide();
+            }
+            
+            document.getElementById('category-name').value = '';
+            document.getElementById('category-description').value = '';
+            errDiv.classList.add('d-none');
+            
+            await refreshCategoryDropdowns();
+            showSuccess('Category created successfully!');
+            
+            if (returnToAssetModal) {
+                setTimeout(() => {
+                    const assetModal = new bootstrap.Modal(document.getElementById('addAssetModal'));
+                    assetModal.show();
+                    returnToAssetModal = false;
+                }, 300);
+            }
+        } else {
+            const err = await response.json();
+            if (err.name) {
+                errDiv.textContent = Array.isArray(err.name) ? err.name.join(', ') : err.name;
+            } else {
+                errDiv.textContent = JSON.stringify(err);
+            }
+            errDiv.classList.remove('d-none');
+        }
+    }
+
+    function showSuccess(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+        alertDiv.style.zIndex = '9999';
+        alertDiv.innerHTML = `
+            <i class="bi bi-check-circle"></i> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
         document.body.appendChild(alertDiv);
         
-        // Auto-remove after 3 seconds
         setTimeout(() => {
             alertDiv.remove();
         }, 3000);
     }
 
-    // Clear category modal error when it's closed
     document.getElementById('addCategoryModal').addEventListener('hidden.bs.modal', function () {
         document.getElementById('category-error').classList.add('d-none');
         if (!returnToAssetModal) {
             document.getElementById('category-name').value = '';
             document.getElementById('category-description').value = '';
         }
+    });
+
+    document.getElementById('addAssetModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('asset-error').classList.add('d-none');
+        document.getElementById('asset-name').value = '';
+        document.getElementById('asset-serial').value = '';
+        document.getElementById('asset-purchase-date').value = '';
+        document.getElementById('asset-cost').value = '';
+        document.getElementById('asset-image').value = '';
     });
 
     loadCategories();

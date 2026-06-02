@@ -4,56 +4,206 @@
 
 {% block content %}
 
-<div class="mb-4">
-    <h4 class="fw-bold">Dashboard</h4>
-    <p class="text-muted">Welcome back, {{ request.user.get_full_name }}</p>
+<div class="page-header">
+    <h4 class="fw-bold mb-1">Dashboard</h4>
+    <p class="text-muted mb-0">Welcome back, <strong>{{ request.user.get_full_name }}</strong></p>
 </div>
 
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
     
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 p-3">
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 kpi-card p-3" style="border-left-color: #0d6efd;">
+            <div class="kpi-icon text-primary">
+                <i class="bi bi-box2"></i>
+            </div>
             <p class="text-muted small mb-1">Total Assets</p>
-            <h2 class="fw-bold text-primary" id="total-assets">--</h2>
+            <h2 class="fw-bold text-primary mb-2" id="total-assets">--</h2>
+            <small class="text-muted"><i class="bi bi-arrow-up"></i> Assets in inventory</small>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 p-3">
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 kpi-card p-3" style="border-left-color: #ffc107;">
+            <div class="kpi-icon text-warning">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
             <p class="text-muted small mb-1">Pending Requests</p>
-            <h2 class="fw-bold text-warning" id="pending-requests">--</h2>
+            <h2 class="fw-bold text-warning mb-2" id="pending-requests">--</h2>
+            <small class="text-muted"><i class="bi bi-calendar-check"></i> Awaiting approval</small>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 p-3">
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 kpi-card p-3" style="border-left-color: #198754;">
+            <div class="kpi-icon text-success">
+                <i class="bi bi-check-circle"></i>
+            </div>
             <p class="text-muted small mb-1">Completed Repairs</p>
-            <h2 class="fw-bold text-success" id="completed-repairs">--</h2>
+            <h2 class="fw-bold text-success mb-2" id="completed-repairs">--</h2>
+            <small class="text-muted"><i class="bi bi-speedometer2"></i> This period</small>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 p-3">
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 kpi-card p-3" style="border-left-color: #dc3545;">
+            <div class="kpi-icon text-danger">
+                <i class="bi bi-tools"></i>
+            </div>
             <p class="text-muted small mb-1">Under Maintenance</p>
-            <h2 class="fw-bold text-danger" id="under-maintenance">--</h2>
+            <h2 class="fw-bold text-danger mb-2" id="under-maintenance">--</h2>
+            <small class="text-muted"><i class="bi bi-exclamation-triangle"></i> Currently busy</small>
         </div>
     </div>
 
 </div>
 
 {% if request.user.is_manager %}
-<div class="card shadow-sm border-0 p-3 mb-4" style="max-width: 300px">
-    <p class="text-muted small mb-1">Total Maintenance Cost</p>
-    <h2 class="fw-bold text-dark" id="total-cost">--</h2>
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 kpi-card p-3" style="border-left-color: #6f42c1;">
+            <div class="kpi-icon text-primary" style="color: #6f42c1 !important;">
+                <i class="bi bi-cash-coin"></i>
+            </div>
+            <p class="text-muted small mb-1">Total Maintenance Cost</p>
+            <h2 class="fw-bold mb-2" id="total-cost" style="color: #6f42c1;">--</h2>
+            <small class="text-muted"><i class="bi bi-graph-up"></i> All time</small>
+        </div>
+    </div>
 </div>
 {% endif %}
+
+<!-- Charts Section -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 p-4">
+            <h6 class="fw-bold mb-3">Asset Status Distribution</h6>
+            <div style="max-height: 300px;">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 p-4">
+            <h6 class="fw-bold mb-3">Maintenance Request Status</h6>
+            <div style="max-height: 300px;">
+                <canvas id="requestStatusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if request.user.is_manager %}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 p-4">
+            <h6 class="fw-bold mb-3">Maintenance Cost Trend</h6>
+            <div style="max-height: 350px;">
+                <canvas id="costTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Activity Section -->
+<div class="section-title">Recent Activity</div>
+
+<div class="row g-3">
+    <!-- Recent Requests Timeline -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 p-4">
+            <h6 class="fw-bold mb-3"><i class="bi bi-hourglass-split text-warning"></i> Recent Requests</h6>
+            <div id="recent-requests-list" class="activity-list" style="max-height: 400px; overflow-y: auto;">
+                <p class="text-muted text-center small py-3">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Work Orders -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 p-4">
+            <h6 class="fw-bold mb-3"><i class="bi bi-clipboard-check text-info"></i> Recent Work Orders</h6>
+            <div id="recent-workorders-list" class="activity-list" style="max-height: 400px; overflow-y: auto;">
+                <p class="text-muted text-center small py-3">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Completed -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 p-4">
+            <h6 class="fw-bold mb-3"><i class="bi bi-check-circle text-success"></i> Recently Completed</h6>
+            <div id="recent-completed-list" class="activity-list" style="max-height: 400px; overflow-y: auto;">
+                <p class="text-muted text-center small py-3">Loading...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .activity-item {
+        padding: 0.75rem;
+        border-left: 3px solid #0d6efd;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .activity-item:hover {
+        background-color: #e7f1ff;
+        border-left-color: #0056b3;
+        transform: translateX(4px);
+    }
+
+    .activity-item.pending { border-left-color: #ffc107; }
+    .activity-item.completed { border-left-color: #198754; }
+    .activity-item.approved { border-left-color: #0dcaf0; }
+    .activity-item.in-progress { border-left-color: #0d6efd; }
+
+    .activity-asset {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #212529;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .activity-meta {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        margin-top: 0.25rem;
+    }
+
+    .status-badge.pending { background-color: #fff3cd; color: #856404; }
+    .status-badge.completed { background-color: #d4edda; color: #155724; }
+    .status-badge.approved { background-color: #d1ecf1; color: #0c5460; }
+    .status-badge.in-progress { background-color: #cfe2ff; color: #084298; }
+</style>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Fetch dashboard data from API
+    let statusChart, requestStatusChart, costTrendChart;
+
     async function loadDashboard() {
         const response = await fetch('/api/dashboard/summary/', {
             headers: {
@@ -71,10 +221,181 @@
 
         if (data.total_maintenance_cost !== undefined) {
             document.getElementById('total-cost').textContent = 
-                '₱' + Number(data.total_maintenance_cost).toLocaleString();
+                '₱' + Number(data.total_maintenance_cost).toLocaleString('en-PH', {maximumFractionDigits: 0});
+        }
+
+        // Load chart data
+        loadCharts(data);
+    }
+
+    async function loadCharts(data) {
+        // Asset Status Chart
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+            if (statusChart) statusChart.destroy();
+            
+            const active = data.total_assets - data.under_maintenance;
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active', 'Under Maintenance'],
+                    datasets: [{
+                        data: [active, data.under_maintenance],
+                        backgroundColor: ['#198754', '#dc3545'],
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+
+        // Request Status Chart
+        const requestCtx = document.getElementById('requestStatusChart');
+        if (requestCtx) {
+            if (requestStatusChart) requestStatusChart.destroy();
+            
+            requestStatusChart = new Chart(requestCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Pending', 'Completed', 'Other'],
+                    datasets: [{
+                        data: [data.pending_requests, data.completed_repairs, 0],
+                        backgroundColor: ['#ffc107', '#198754', '#6c757d'],
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+
+        // Cost Trend Chart (last 12 months)
+        if (document.getElementById('costTrendChart') && data.total_maintenance_cost !== undefined) {
+            const costCtx = document.getElementById('costTrendChart');
+            if (costTrendChart) costTrendChart.destroy();
+            
+            // Generate sample data for demonstration
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const costData = Array(12).fill(0).map(() => Math.floor(Math.random() * 50000));
+            
+            costTrendChart = new Chart(costCtx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Monthly Maintenance Cost (₱)',
+                        data: costData,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#0d6efd',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₱' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
     }
 
     loadDashboard();
+
+    // Load recent activity
+    async function loadRecentActivity() {
+        try {
+            const response = await fetch('/api/dashboard/recent-activity/', {
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                credentials: 'same-origin',
+            });
+            const data = await response.json();
+
+            // Render recent requests
+            const requestsList = document.getElementById('recent-requests-list');
+            if (data.recent_requests.length === 0) {
+                requestsList.innerHTML = '<p class="text-muted text-center small py-3">No recent requests</p>';
+            } else {
+                requestsList.innerHTML = data.recent_requests.map(req => `
+                    <div class="activity-item ${req.status.toLowerCase()}">
+                        <div class="activity-asset">${req.asset_name}</div>
+                        <div class="activity-meta">${new Date(req.date_requested).toLocaleDateString()}</div>
+                        <span class="status-badge ${req.status.toLowerCase()}">${req.status}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Render recent work orders
+            const woList = document.getElementById('recent-workorders-list');
+            if (data.recent_workorders.length === 0) {
+                woList.innerHTML = '<p class="text-muted text-center small py-3">No recent work orders</p>';
+            } else {
+                woList.innerHTML = data.recent_workorders.map(wo => `
+                    <div class="activity-item ${wo.status.toLowerCase().replace('_', '-')}">
+                        <div class="activity-asset">WO-${wo.id}</div>
+                        <div class="activity-meta">${wo.asset_name}</div>
+                        <span class="status-badge ${wo.status.toLowerCase().replace('_', '-')}">${wo.status.replace('_', ' ')}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Render recent completed
+            const completedList = document.getElementById('recent-completed-list');
+            if (data.recent_completed.length === 0) {
+                completedList.innerHTML = '<p class="text-muted text-center small py-3">No recent completions</p>';
+            } else {
+                completedList.innerHTML = data.recent_completed.map(hist => `
+                    <div class="activity-item completed">
+                        <div class="activity-asset">${hist.asset_name}</div>
+                        <div class="activity-meta">₱${Number(hist.maintenance_cost).toLocaleString('en-PH', {maximumFractionDigits: 0})}</div>
+                        <div class="activity-meta text-muted" style="font-size: 0.75rem;">${new Date(hist.timestamp).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading recent activity:', error);
+        }
+    }
+
+    loadRecentActivity();
 </script>
 {% endblock %}

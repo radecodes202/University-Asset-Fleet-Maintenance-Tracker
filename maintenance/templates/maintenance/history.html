@@ -4,12 +4,43 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="fw-bold mb-0">Maintenance History</h4>
-        <p class="text-muted small">Complete record of all repairs</p>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold mb-0">Maintenance History</h4>
+            <p class="text-muted small mb-0">Complete record of all completed repairs and maintenance</p>
+        </div>
+        {% if request.user.is_manager or request.user.is_auditor %}
+        <a href="{% url 'maintenance:history-export-csv' %}" class="btn btn-outline-success btn-sm" title="Export maintenance history to CSV">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+        {% endif %}
     </div>
 </div>
+
+<!-- Summary Cards -->
+{% if request.user.is_manager %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 kpi-card p-3" style="border-left-color: #6f42c1;">
+            <div class="kpi-icon" style="color: #6f42c1;">
+                <i class="bi bi-cash-coin"></i>
+            </div>
+            <p class="text-muted small mb-1">Total Maintenance Cost</p>
+            <h4 class="fw-bold mb-0" id="total-cost" style="color: #6f42c1;">₱0</h4>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 kpi-card p-3" style="border-left-color: #198754;">
+            <div class="kpi-icon" style="color: #198754;">
+                <i class="bi bi-check2-all"></i>
+            </div>
+            <p class="text-muted small mb-1">Total Completed</p>
+            <h4 class="fw-bold mb-0" id="total-count" style="color: #198754;">0</h4>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Filters -->
 <div class="card shadow-sm border-0 p-3 mb-4">
@@ -18,13 +49,13 @@
             <input type="text" id="search-input" class="form-control" placeholder="Search asset name...">
         </div>
         <div class="col-md-3">
-            <input type="date" id="date-from" class="form-control">
+            <input type="date" id="date-from" class="form-control" placeholder="From">
         </div>
         <div class="col-md-3">
-            <input type="date" id="date-to" class="form-control">
+            <input type="date" id="date-to" class="form-control" placeholder="To">
         </div>
         <div class="col-md-2">
-            <button class="btn btn-secondary w-100" onclick="loadHistory()">Filter</button>
+            <button class="btn btn-secondary w-100" onclick="loadHistory()"><i class="bi bi-search"></i> Filter</button>
         </div>
     </div>
 </div>
@@ -33,22 +64,22 @@
 <div class="card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-dark">
-                <tr>
-                    <th>Asset</th>
-                    <th>Work Order</th>
-                    <th>Completed By</th>
-                    <th>Date</th>
-                    <th>Remarks</th>
+            <thead class="table-light">
+                <tr class="border-bottom">
+                    <th class="text-muted small fw-600 ps-3">Asset</th>
+                    <th class="text-muted small fw-600">Work Order</th>
+                    <th class="text-muted small fw-600">Completed By</th>
+                    <th class="text-muted small fw-600">Date</th>
+                    <th class="text-muted small fw-600">Remarks</th>
                     {% if request.user.is_manager %}
-                    <th>Cost</th>
+                    <th class="text-muted small fw-600 text-end pe-3">Cost</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody id="history-table-body">
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
-                        Loading history...
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="bi bi-hourglass-split"></i> Loading history...
                     </td>
                 </tr>
             </tbody>
@@ -56,12 +87,46 @@
     </div>
 </div>
 
+<style>
+    .table thead th {
+        background-color: #f8f9fa;
+        border-top: none;
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .cost-badge {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+</style>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
     async function loadHistory() {
-        const response = await fetch('/api/maintenance/history/', {
+        const searchInput = document.getElementById('search-input').value;
+        const dateFrom = document.getElementById('date-from').value;
+        const dateTo = document.getElementById('date-to').value;
+
+        let url = '/api/maintenance/history/?';
+        if (searchInput) url += `search=${searchInput}&`;
+        if (dateFrom) url += `date_from=${dateFrom}&`;
+        if (dateTo) url += `date_to=${dateTo}&`;
+
+        const response = await fetch(url, {
             credentials: 'same-origin',
         });
 
@@ -71,22 +136,37 @@
         if (!data.results || data.results.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
-                        No maintenance history found.
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="bi bi-inbox"></i> No maintenance history found.
                     </td>
                 </tr>`;
+            document.getElementById('total-cost').textContent = '₱0';
+            document.getElementById('total-count').textContent = '0';
             return;
+        }
+
+        // Calculate totals
+        let totalCost = 0;
+        data.results.forEach(h => {
+            totalCost += parseFloat(h.maintenance_cost) || 0;
+        });
+
+        if (document.getElementById('total-cost')) {
+            document.getElementById('total-cost').textContent = '₱' + Number(totalCost).toLocaleString('en-PH', {maximumFractionDigits: 0});
+            document.getElementById('total-count').textContent = data.results.length;
         }
 
         tbody.innerHTML = data.results.map(h => `
             <tr>
-                <td>${h.asset || '-'}</td>
-                <td>WO-${h.work_order || '-'}</td>
-                <td>${h.completed_by || '-'}</td>
-                <td>${h.timestamp ? h.timestamp.substring(0,10) : '-'}</td>
-                <td>${h.remarks || '-'}</td>
+                <td class="ps-3"><strong><i class="bi bi-box2"></i> ${h.asset || '-'}</strong></td>
+                <td><small class="badge bg-light text-dark">WO-${h.work_order || '-'}</small></td>
+                <td><small class="text-muted">${h.completed_by || '-'}</small></td>
+                <td><small class="text-muted">${h.timestamp ? h.timestamp.substring(0,10) : '-'}</small></td>
+                <td><small>${h.remarks ? (h.remarks.substring(0, 40) + (h.remarks.length > 40 ? '...' : '')) : '—'}</small></td>
                 {% if request.user.is_manager %}
-                <td>₱${Number(h.maintenance_cost).toLocaleString()}</td>
+                <td class="text-end pe-3">
+                    <span class="cost-badge">₱${Number(h.maintenance_cost).toLocaleString('en-PH', {maximumFractionDigits: 2})}</span>
+                </td>
                 {% endif %}
             </tr>
         `).join('');

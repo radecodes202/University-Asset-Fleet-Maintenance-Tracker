@@ -4,32 +4,49 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="fw-bold mb-0">Work Orders</h4>
-        <p class="text-muted small">Manage and track all work orders</p>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold mb-0">Work Orders</h4>
+            <p class="text-muted small mb-0">Manage and track all maintenance work orders</p>
+        </div>
+        {% if request.user.is_manager %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createWorkOrderModal">
+            <i class="bi bi-plus-circle"></i> Create Work Order
+        </button>
+        {% endif %}
     </div>
-    {% if request.user.is_manager %}
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createWorkOrderModal">
-        + Create Work Order
-    </button>
-    {% endif %}
 </div>
 
-<!-- Filters -->
+<!-- Status Filter Pills -->
+<div class="mb-4">
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-sm btn-outline-secondary active" onclick="filterByStatus('')">
+            <i class="bi bi-funnel"></i> All
+        </button>
+        <button class="btn btn-sm btn-outline-info" onclick="filterByStatus('OPEN')">
+            <i class="bi bi-exclamation-circle"></i> Open
+        </button>
+        <button class="btn btn-sm btn-outline-warning" onclick="filterByStatus('IN_PROGRESS')">
+            <i class="bi bi-arrow-repeat"></i> In Progress
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="filterByStatus('COMPLETED')">
+            <i class="bi bi-check-circle"></i> Completed
+        </button>
+        <button class="btn btn-sm btn-outline-danger" onclick="filterByStatus('CANCELLED')">
+            <i class="bi bi-x-circle"></i> Cancelled
+        </button>
+    </div>
+</div>
+
+<!-- Search Bar -->
 <div class="card shadow-sm border-0 p-3 mb-4">
     <div class="row g-2">
-        <div class="col-md-4">
-            <select id="status-filter" class="form-select">
-                <option value="">All Statuses</option>
-                <option value="OPEN">Open</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-            </select>
+        <div class="col-md-10">
+            <input type="text" id="search-input" class="form-control" placeholder="Search work order ID, asset name, or technician...">
         </div>
         <div class="col-md-2">
-            <button class="btn btn-secondary w-100" onclick="loadWorkOrders()">Filter</button>
+            <button class="btn btn-secondary w-100" onclick="loadWorkOrders()"><i class="bi bi-search"></i> Search</button>
         </div>
     </div>
 </div>
@@ -38,29 +55,70 @@
 <div class="card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-dark">
-                <tr>
-                    <th>WO #</th>
-                    <th>Asset</th>
-                    <th>Technician</th>
-                    <th>Description</th>
-                    <th>Date Started</th>
-                    <th>Status</th>
+            <thead class="table-light">
+                <tr class="border-bottom">
+                    <th class="text-muted small fw-600 ps-3">WO #</th>
+                    <th class="text-muted small fw-600">Asset</th>
+                    <th class="text-muted small fw-600">Technician</th>
+                    <th class="text-muted small fw-600">Date Started</th>
+                    <th class="text-muted small fw-600">Status</th>
                     {% if request.user.is_manager %}
-                    <th>Actions</th>
+                    <th class="text-muted small fw-600 text-end pe-3">Actions</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody id="workorders-table-body">
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
-                        Loading work orders...
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="bi bi-hourglass-split"></i> Loading work orders...
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
 </div>
+
+<style>
+    .table thead th {
+        background-color: #f8f9fa;
+        border-top: none;
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .status-badge.open { background-color: #cfe2ff; color: #084298; }
+    .status-badge.progress { background-color: #fff3cd; color: #856404; }
+    .status-badge.completed { background-color: #d4edda; color: #155724; }
+    .status-badge.cancelled { background-color: #e2e3e5; color: #383d41; }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .action-buttons .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+</style>
 
 {% if request.user.is_manager %}
 
@@ -149,13 +207,19 @@
     </div>
 </div>
 
-{% endif %}
-
-{% endblock %}
-
 {% block scripts %}
 <script>
     let currentWorkOrderId = null;
+    let currentStatusFilter = '';
+
+    function filterByStatus(status) {
+        currentStatusFilter = status;
+        document.querySelectorAll('.page-header .btn-outline-secondary, .page-header .btn-outline-info, .page-header .btn-outline-warning, .page-header .btn-outline-success, .page-header .btn-outline-danger').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.closest('button').classList.add('active');
+        loadWorkOrders();
+    }
 
     function openCompleteModal(id) {
         currentWorkOrderId = id;
@@ -194,6 +258,7 @@
             bootstrap.Modal.getInstance(
                 document.getElementById('completeWorkOrderModal')
             ).hide();
+            showSuccess('Work order completed successfully!');
             loadWorkOrders();
         } else {
             const err = await response.json();
@@ -203,9 +268,10 @@
     }
 
     async function loadWorkOrders() {
-        const status = document.getElementById('status-filter').value;
+        const searchInput = document.getElementById('search-input').value;
         let url = '/api/maintenance/workorders/?';
-        if (status) url += `status=${status}&`;
+        if (currentStatusFilter) url += `status=${currentStatusFilter}&`;
+        if (searchInput) url += `search=${searchInput}&`;
 
         const response = await fetch(url, { credentials: 'same-origin' });
         const data = await response.json();
@@ -214,8 +280,8 @@
         if (!data.results || data.results.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
-                        No work orders found.
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="bi bi-inbox"></i> No work orders found.
                     </td>
                 </tr>`;
             return;
@@ -223,23 +289,179 @@
 
         tbody.innerHTML = data.results.map(wo => `
             <tr>
-                <td>WO-${wo.id}</td>
-                <td>${wo.maintenance_request || '-'}</td>
-                <td>${wo.assigned_technician || '-'}</td>
-                <td>${wo.work_description.substring(0, 50)}...</td>
-                <td>${wo.date_started ? wo.date_started.substring(0,10) : 'Not started'}</td>
+                <td class="ps-3"><strong><i class="bi bi-receipt"></i> WO-${wo.id}</strong></td>
+                <td><small class="text-muted">${wo.maintenance_request ? 'MR-' + wo.maintenance_request : '-'}</small></td>
+                <td><small>${wo.assigned_technician || '—'}</small></td>
+                <td><small class="text-muted">${wo.date_started ? wo.date_started.substring(0,10) : '—'}</small></td>
                 <td>
-                    <span class="badge ${getStatusBadge(wo.status)}">
-                        ${wo.status}
+                    <span class="status-badge ${getStatusClass(wo.status)}">
+                        ${getStatusIcon(wo.status)} ${wo.status.replace(/_/g, ' ')}
                     </span>
                 </td>
                 {% if request.user.is_manager %}
-                <td>
-                    ${wo.status === 'OPEN' ? `
-                        <button class="btn btn-primary btn-sm" onclick="updateStatus(${wo.id}, 'IN_PROGRESS')">
-                            Start
-                        </button>
-                    ` : ''}
+                <td class="pe-3">
+                    <div class="action-buttons">
+                        ${wo.status === 'OPEN' ? `
+                            <button class="btn btn-sm btn-outline-primary" onclick="updateStatus(${wo.id}, 'IN_PROGRESS')" title="Start work on this order">
+                                <i class="bi bi-play-circle"></i> Start
+                            </button>
+                        ` : ''}
+                        ${wo.status === 'IN_PROGRESS' ? `
+                            <button class="btn btn-sm btn-outline-success" onclick="openCompleteModal(${wo.id})" title="Complete this work order">
+                                <i class="bi bi-check-circle"></i> Complete
+                            </button>
+                        ` : ''}
+                        ${wo.status !== 'CANCELLED' && wo.status !== 'COMPLETED' ? `
+                            <button class="btn btn-sm btn-outline-danger" onclick="cancelWorkOrder(${wo.id})" title="Cancel this work order">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </button>
+                        ` : ''}
+                    </div>
+                </td>
+                {% endif %}
+            </tr>
+        `).join('');
+    }
+
+    function getStatusClass(status) {
+        const classes = {
+            'OPEN': 'open',
+            'IN_PROGRESS': 'progress',
+            'COMPLETED': 'completed',
+            'CANCELLED': 'cancelled',
+        };
+        return classes[status] || 'open';
+    }
+
+    function getStatusIcon(status) {
+        const icons = {
+            'OPEN': '<i class="bi bi-exclamation-circle"></i>',
+            'IN_PROGRESS': '<i class="bi bi-arrow-repeat"></i>',
+            'COMPLETED': '<i class="bi bi-check-circle"></i>',
+            'CANCELLED': '<i class="bi bi-x-circle"></i>',
+        };
+        return icons[status] || '<i class="bi bi-circle"></i>';
+    }
+
+    async function loadApprovedRequests() {
+        const response = await fetch(
+            '/api/maintenance/requests/?status=APPROVED',
+            { credentials: 'same-origin' }
+        );
+        const data = await response.json();
+        const select = document.getElementById('wo-request');
+        if (select && data.results) {
+            data.results.forEach(req => {
+                select.innerHTML += `
+                    <option value="${req.id}">
+                        #${req.id} - ${req.asset ? req.asset.asset_name : 'Unknown'}
+                    </option>`;
+            });
+        }
+    }
+
+    async function createWorkOrder() {
+        const requestId   = document.getElementById('wo-request').value;
+        const technician  = document.getElementById('wo-technician').value;
+        const description = document.getElementById('wo-description').value;
+        const errDiv      = document.getElementById('wo-error');
+
+        if (!requestId || !description) {
+            errDiv.textContent = 'Please fill in all required fields.';
+            errDiv.classList.remove('d-none');
+            return;
+        }
+
+        const response = await fetch('/api/maintenance/workorders/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                maintenance_request: requestId,
+                assigned_technician: technician,
+                work_description:    description,
+            }),
+        });
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(
+                document.getElementById('createWorkOrderModal')
+            ).hide();
+            showSuccess('Work order created successfully!');
+            loadWorkOrders();
+        } else {
+            const err = await response.json();
+            errDiv.textContent = JSON.stringify(err);
+            errDiv.classList.remove('d-none');
+        }
+    }
+
+    async function updateStatus(id, newStatus) {
+        const response = await fetch(`/api/maintenance/workorders/${id}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ status: newStatus }),
+        });
+        if (response.ok) {
+            showSuccess(`Work order status updated to ${newStatus.replace(/_/g, ' ')}!`);
+            loadWorkOrders();
+        }
+    }
+
+    async function cancelWorkOrder(id) {
+        if (confirm('Are you sure you want to cancel this work order?')) {
+            await updateStatus(id, 'CANCELLED');
+        }
+    }
+
+    function showSuccess(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+        alertDiv.style.zIndex = '9999';
+        alertDiv.innerHTML = `
+            <i class="bi bi-check-circle"></i> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 3000);
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(cookie => {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.split('=')[1]);
+                }
+            });
+        }
+        return cookieValue;
+    }
+
+    document.getElementById('createWorkOrderModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('wo-error').classList.add('d-none');
+        document.getElementById('wo-request').value = '';
+        document.getElementById('wo-technician').value = '';
+        document.getElementById('wo-description').value = '';
+    });
+
+    {% if request.user.is_manager %}
+    loadApprovedRequests();
+    {% endif %}
+    loadWorkOrders();
+</script>
+{% endblock %}
                     ${wo.status === 'IN_PROGRESS' ? `
                         <button class="btn btn-success btn-sm" onclick="openCompleteModal(${wo.id})">
                             Complete

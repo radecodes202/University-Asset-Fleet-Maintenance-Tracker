@@ -5,81 +5,120 @@
 
 {% block content %}
 
-<div class="mb-4">
-    <h4 class="fw-bold">Audit Logs</h4>
-    <p class="text-muted">Complete audit trail of all system changes</p>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold mb-0">Audit Logs</h4>
+            <p class="text-muted small mb-0">Complete audit trail of all system changes and activities</p>
+        </div>
+        <a href="{% url 'audit:export-csv' %}" class="btn btn-outline-success btn-sm" title="Export audit logs to CSV">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+    </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Action</label>
-                <select id="actionFilter" class="form-select">
-                    <option value="">All Actions</option>
-                    <option value="CREATE">Created</option>
-                    <option value="UPDATE">Updated</option>
-                    <option value="DELETE">Deleted</option>
-                    <option value="STATUS_CHANGE">Status Changed</option>
-                    <option value="APPROVE">Approved</option>
-                    <option value="REJECT">Rejected</option>
-                    <option value="LOGIN">Login</option>
-                    <option value="LOGOUT">Logout</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Model</label>
-                <select id="modelFilter" class="form-select">
-                    <option value="">All Models</option>
-                    <option value="Asset">Asset</option>
-                    <option value="MaintenanceRequest">Maintenance Request</option>
-                    <option value="WorkOrder">Work Order</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Date From</label>
-                <input type="date" id="dateFrom" class="form-control">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Search</label>
-                <input type="text" id="searchBox" class="form-control" placeholder="Object ID, Email, IP...">
-            </div>
+<!-- Filter Card -->
+<div class="card shadow-sm border-0 mb-4 p-3">
+    <div class="row g-2">
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Action</label>
+            <select id="actionFilter" class="form-select form-select-sm">
+                <option value="">All</option>
+                <option value="CREATE"><i class="bi bi-plus-lg"></i> Created</option>
+                <option value="UPDATE"><i class="bi bi-pencil"></i> Updated</option>
+                <option value="DELETE"><i class="bi bi-trash"></i> Deleted</option>
+                <option value="STATUS_CHANGE">Status Changed</option>
+                <option value="APPROVE"><i class="bi bi-check-lg"></i> Approved</option>
+                <option value="REJECT"><i class="bi bi-x-lg"></i> Rejected</option>
+                <option value="LOGIN"><i class="bi bi-box-arrow-in-right"></i> Login</option>
+            </select>
         </div>
-        <div class="mt-3">
-            <button id="filterBtn" class="btn btn-primary btn-sm">Apply Filters</button>
-            <button id="clearBtn" class="btn btn-secondary btn-sm">Clear Filters</button>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Model</label>
+            <select id="modelFilter" class="form-select form-select-sm">
+                <option value="">All Models</option>
+                <option value="Asset">Asset</option>
+                <option value="MaintenanceRequest">Maintenance Request</option>
+                <option value="WorkOrder">Work Order</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Date From</label>
+            <input type="date" id="dateFrom" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold">Search</label>
+            <input type="text" id="searchBox" class="form-control form-control-sm" placeholder="Object ID, Email, IP...">
+        </div>
+        <div class="col-md-2 d-flex gap-2 align-items-end">
+            <button id="filterBtn" class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i> Filter</button>
+            <button id="clearBtn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
     </div>
 </div>
 
-<div class="card">
+<!-- Audit Logs Table -->
+<div class="card shadow-sm border-0">
     <div class="table-responsive" style="max-height: calc(100vh - 400px); overflow-y: auto;">
         <table class="table table-hover mb-0">
             <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
-                <tr>
-                    <th>Timestamp</th>
-                    <th>User</th>
-                    <th>Action</th>
-                    <th>Model</th>
-                    <th>Object</th>
-                    <th>IP Address</th>
-                    <th>Details</th>
+                <tr class="border-bottom">
+                    <th class="text-muted small fw-600">Timestamp</th>
+                    <th class="text-muted small fw-600">User</th>
+                    <th class="text-muted small fw-600">Action</th>
+                    <th class="text-muted small fw-600">Model</th>
+                    <th class="text-muted small fw-600">Object</th>
+                    <th class="text-muted small fw-600">IP Address</th>
+                    <th class="text-muted small fw-600 text-center">Details</th>
                 </tr>
             </thead>
             <tbody id="logsTable">
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">Loading...</td>
+                    <td colspan="7" class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</td>
                 </tr>
             </tbody>
         </table>
     </div>
 </div>
 
+<style>
+    .table thead th {
+        background-color: #f8f9fa;
+        border-top: none;
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .action-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .action-badge.create { background-color: #d4edda; color: #155724; }
+    .action-badge.update { background-color: #d1ecf1; color: #0c5460; }
+    .action-badge.delete { background-color: #f8d7da; color: #721c24; }
+    .action-badge.approve { background-color: #d4edda; color: #155724; }
+    .action-badge.reject { background-color: #f8d7da; color: #721c24; }
+    .action-badge.login { background-color: #cfe2ff; color: #084298; }
+</style>
+
 <div class="modal fade" id="detailsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Audit Log Details</h5>
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">Audit Log Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">

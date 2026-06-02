@@ -1,5 +1,8 @@
 
 from django.shortcuts import render
+import csv
+from django.http import HttpResponse
+from datetime import datetime
 
 # Create your views here.
 
@@ -17,6 +20,38 @@ def audit_logs_page(request):
     if not (request.user.is_manager or request.user.is_auditor):
         return render(request, 'dashboard/403.html', status=403)
     return render(request, 'audit/logs.html')
+
+@login_required
+def export_audit_logs_csv(request):
+    """Export audit logs to CSV"""
+    if not (request.user.is_manager or request.user.is_auditor):
+        return HttpResponse('Unauthorized', status=403)
+    
+    # Create response object
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="audit_logs_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    # Create CSV writer
+    writer = csv.writer(response)
+    writer.writerow(['Timestamp', 'User', 'Action', 'Model', 'Object ID', 'Object Display', 'Old Values', 'New Values', 'IP Address'])
+    
+    # Get all audit logs
+    logs = AuditLog.objects.select_related('user').all().order_by('-timestamp')
+    
+    for log in logs:
+        writer.writerow([
+            log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            log.user.email if log.user else 'Unknown',
+            log.action,
+            log.model_name,
+            log.object_id,
+            log.object_display,
+            log.old_values,
+            log.new_values,
+            log.ip_address,
+        ])
+    
+    return response
 
 class AuditLogListView(generics.ListAPIView):
     permission_classes = [IsManagerOrAuditor]

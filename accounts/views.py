@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from .models import User
@@ -16,7 +17,29 @@ class UserListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsManager]
 
     def get_queryset(self):
-        return User.objects.all().order_by('last_name')
+        queryset = User.objects.all().order_by('last_name')
+        
+        # Search by name or email
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(email__icontains=search)
+            )
+        
+        # Filter by role
+        role = self.request.query_params.get('role', None)
+        if role:
+            queryset = queryset.filter(role=role)
+        
+        # Filter by is_active status
+        is_active = self.request.query_params.get('is_active', None)
+        if is_active is not None:
+            is_active_bool = is_active.lower() in ('true', '1', 'yes')
+            queryset = queryset.filter(is_active=is_active_bool)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
