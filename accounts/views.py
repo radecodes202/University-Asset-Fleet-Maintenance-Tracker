@@ -154,7 +154,7 @@ class FailedLoginTrackingBackend(ModelBackend):
             user.last_failed_login = timezone.now()
 
             # Lock account after 5 failed attempts
-            if user.failed_login_attempts >= 5:
+            if user.failed_login_attempts >= 4:
                 user.locked_until = timezone.now() + timedelta(minutes=30)
 
             user.save(update_fields=['failed_login_attempts', 'last_failed_login', 'locked_until'])
