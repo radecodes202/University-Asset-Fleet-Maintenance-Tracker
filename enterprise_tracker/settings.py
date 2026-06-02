@@ -5,7 +5,7 @@ Updated for Railway production deployment.
 
 from pathlib import Path
 # pyrefly: ignore [missing-import] 
-from decouple import config
+from decouple import Config
 from datetime import timedelta
 import dj_database_url
 
