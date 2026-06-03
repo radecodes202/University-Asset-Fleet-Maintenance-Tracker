@@ -14,7 +14,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CreateUserSerializer(serializers.ModelSerializer):
     """Serializer for creating new users (Manager only)"""
-    password = serializers.CharField(min_length=8)
+    password = serializers.CharField(write_only=True, min_length=8)
     
     class Meta:
         model = User
@@ -34,9 +34,6 @@ class CreateUserSerializer(serializers.ModelSerializer):
             role=validated_data.get('role', Role.STAFF)
         )
         return user
-
-
-class UserManagementSerializer(serializers.ModelSerializer):
     """Serializer for viewing and managing users"""
     full_name = serializers.SerializerMethodField()
     
