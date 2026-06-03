@@ -51,7 +51,7 @@ INSTALLED_APPS = [
 # docs: https://django-axes.readthedocs.io/
 # We use axes' AxesStandaloneBackend to wrap the project's
 # FailedLoginTrackingBackend so both layers (IP lockout + audit log) fire.
-AXES_ENABLED = False
+AXES_ENABLED = True
 AXES_FAILURE_LIMIT = 5                # max failed attempts before lockout
 AXES_COOLOFF_TIME = timedelta(minutes=10)  # lockout duration
 AXES_RESET_ON_SUCCESS = True          # reset counter after a successful login
@@ -131,12 +131,20 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Cloudinary (media files)
+CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME', default='')
+CLOUDINARY_API_KEY = config('CLOUDINARY_API_KEY', default='')
+CLOUDINARY_API_SECRET = config('CLOUDINARY_API_SECRET', default='')
+
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
-    'API_KEY': config('CLOUDINARY_API_KEY', default=''),
-    'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
+    'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+    'API_KEY': CLOUDINARY_API_KEY,
+    'API_SECRET': CLOUDINARY_API_SECRET,
 }
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Media files configuration (required even with Cloudinary)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # REST Framework
 REST_FRAMEWORK = {

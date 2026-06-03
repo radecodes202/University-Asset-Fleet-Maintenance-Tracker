@@ -34,6 +34,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
             role=validated_data.get('role', Role.STAFF)
         )
         return user
+
+
+class UserManagementSerializer(serializers.ModelSerializer):
     """Serializer for viewing and managing users"""
     full_name = serializers.SerializerMethodField()
     

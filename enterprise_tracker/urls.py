@@ -37,4 +37,9 @@ urlpatterns = [
 
     # Root redirect
     path('', RedirectView.as_view(url='/login/')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Serve media files only in development (DEBUG=True)
+# In production, Cloudinary serves images directly from their CDN
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
