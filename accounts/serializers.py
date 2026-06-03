@@ -14,7 +14,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CreateUserSerializer(serializers.ModelSerializer):
     """Serializer for creating new users (Manager only)"""
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(min_length=8)
     
     class Meta:
         model = User
