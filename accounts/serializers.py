@@ -1,65 +1,46 @@
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
-from .models import User
+from .models import User, Role
 
-class UserSerializer(serializers.ModelSerializer):
 
-    can_view_costs = serializers.BooleanField(read_only=True)
-    can_approve_requests = serializers.BooleanField(read_only=True)
-    is_read_only = serializers.BooleanField(read_only=True)
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Custom JWT serializer that uses email instead of username.
+    SimpleJWT's default serializer expects 'username', but our User model
+    uses email as the USERNAME_FIELD.
+    """
+    username_field = 'email'
 
-    class Meta:
-        model = User
-
-        fields = ['id',
-                  'email', 
-                  'first_name', 
-                  'last_name', 
-                  'employee_id', 
-                  'department', 
-                  'role', 
-                  'can_view_costs', 
-                  'can_approve_requests', 
-                  'is_read_only']
-
-class UserManagementSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = User
-        fields = [
-            'id',
-            'first_name',
-            'last_name',
-            'email',
-            'employee_id',
-            'department',
-            'role',
-            'is_active',
-            'full_name',
-        ]
-
-    full_name = serializers.SerializerMethodField()
-
-    def get_full_name(self, obj):
-        return obj.get_full_name()
 
 class CreateUserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-
+    """Serializer for creating new users (Manager only)"""
+    password = serializers.CharField(write_only=True, min_length=8)
+    
     class Meta:
         model = User
-        fields = [
-            'first_name',
-            'last_name',
-            'email',
-            'employee_id',
-            'department',
-            'role',
-            'password',
-        ]
-
+        fields = ['email', 'password', 'first_name', 'last_name', 'employee_id', 'department', 'role']
+    
     def create(self, validated_data):
-        password = validated_data.pop('password')
-        user = User(**validated_data)
-        user.set_password(password)
-        user.save()
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            password=validated_data['password'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+            employee_id=validated_data.get('employee_id'),
+            department=validated_data.get('department'),
+            role=validated_data.get('role', Role.STAFF)
+        )
         return user
+
+
+class UserManagementSerializer(serializers.ModelSerializer):
+    """Serializer for viewing and managing users"""
+    full_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'last_name', 'full_name', 'employee_id', 'department', 'role', 'is_active', 'date_joined', 'last_login']
+        read_only_fields = ['id', 'date_joined', 'last_login']
+    
+    def get_full_name(self, obj):
+        return obj.get_full_name()

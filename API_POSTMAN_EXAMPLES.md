@@ -29,7 +29,7 @@ http://localhost:8000/api/
 
 **Endpoint:** `POST /api/auth/login/`
 
-**Description:** Authenticate user and obtain access/refresh tokens.
+**Description:** Authenticate user and obtain access/refresh tokens. Uses email-based authentication.
 
 **Headers:**
 ```
@@ -62,6 +62,12 @@ Content-Type: application/json
   "password": "password123"
 }
 ```
+
+> **Note:** The login endpoint uses email-based authentication. Make sure the user exists in the database and the credentials are correct. If you get a 401 error, verify that:
+> 1. The email address is exactly as created (case-sensitive)
+> 2. The password is correct
+> 3. The user account is active (`is_active=True`)
+> 4. The account is not locked due to failed login attempts
 
 ---
 
@@ -1334,4 +1340,4 @@ Response will have `purchase_cost` field removed or showing "Restricted".
 
 ---
 
-*Complete API reference for FleetTrack - University Asset & Fleet Maintenance Tracker*
+
