@@ -51,7 +51,7 @@ INSTALLED_APPS = [
 # docs: https://django-axes.readthedocs.io/
 # We use axes' AxesStandaloneBackend to wrap the project's
 # FailedLoginTrackingBackend so both layers (IP lockout + audit log) fire.
-AXES_ENABLED = True
+AXES_ENABLED = False
 AXES_FAILURE_LIMIT = 5                # max failed attempts before lockout
 AXES_COOLOFF_TIME = timedelta(minutes=10)  # lockout duration
 AXES_RESET_ON_SUCCESS = True          # reset counter after a successful login
