@@ -18,9 +18,12 @@ class CreateUserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['email', 'password', 'first_name', 'last_name', 'employee_id', 'department', 'role']
+        fields = ['email', 'password', 'first_name', 'last_name', 'employee_id', 'department', 'role', 'is_active']
+        read_only_fields = ['is_active']  # Always True, cannot be changed via API
     
     def create(self, validated_data):
+        # Always set is_active=True for new users
+        validated_data['is_active'] = True
         user = User.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
