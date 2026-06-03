@@ -37,6 +37,8 @@
             top: 0;
             height: 100vh;
             overflow-y: auto;
+            transition: transform 0.3s ease-in-out;
+            z-index: 1040;
         }
 
         /* Slim scrollbar so the dark sidebar looks clean */
@@ -114,10 +116,155 @@
             margin-bottom: 1rem;
             color: #212529;
         }
+
+        /* Mobile hamburger button */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1050;
+            background: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 44px;
+            height: 44px;
+            font-size: 1.2rem;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Mobile overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1030;
+        }
+
+        /* Mobile responsive styles */
+        @media (max-width: 767.98px) {
+            .app-sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                transform: translateX(-100%);
+                width: 280px;
+                max-width: 85vw;
+                box-shadow: 4px 0 15px rgba(0,0,0,0.3);
+            }
+
+            .app-sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                padding: 1rem;
+                padding-top: 70px;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+            }
+
+            .sidebar-overlay.overlay-open {
+                display: block;
+            }
+
+            .page-header {
+                margin-bottom: 1.5rem;
+                padding-bottom: 0.75rem;
+            }
+
+            .page-header h4 {
+                font-size: 1.25rem;
+            }
+
+            /* Stack KPI cards on mobile */
+            .kpi-card {
+                padding: 1rem !important;
+            }
+
+            .kpi-icon {
+                font-size: 1.5rem;
+            }
+
+            .kpi-card h2 {
+                font-size: 1.5rem;
+            }
+
+            /* Make tables more mobile-friendly */
+            .table-responsive {
+                border-radius: 8px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Adjust modal dialogs on mobile */
+            .modal-dialog {
+                margin: 0.5rem;
+                max-width: calc(100vw - 1rem);
+            }
+
+            .modal-body {
+                padding: 1rem;
+            }
+
+            /* Touch-friendly buttons */
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* Adjust filter row on mobile */
+            .card.shadow-sm.border-0.p-3.mb-4 .row {
+                gap: 0.75rem;
+            }
+
+            /* Section titles */
+            .section-title {
+                font-size: 1.1rem;
+                margin-top: 1.5rem;
+            }
+        }
+
+        /* Extra small devices */
+        @media (max-width: 575.98px) {
+            .main-content {
+                padding: 0.75rem;
+                padding-top: 65px;
+            }
+
+            .kpi-card p.small {
+                font-size: 0.75rem;
+            }
+
+            .page-header h4 {
+                font-size: 1.1rem;
+            }
+
+            .page-header p {
+                font-size: 0.8rem;
+            }
+        }
     </style>
 
 </head>
 <body>
+
+    <!-- Mobile hamburger menu button -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <div class="d-flex"> 
         
@@ -197,6 +344,72 @@
 
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    
+    <script>
+        // Mobile sidebar toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('mobile-menu-toggle');
+            const sidebar = document.querySelector('.app-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const icon = menuToggle.querySelector('i');
+
+            function toggleSidebar() {
+                const isOpen = sidebar.classList.toggle('sidebar-open');
+                overlay.classList.toggle('overlay-open', isOpen);
+                
+                // Update icon
+                if (isOpen) {
+                    icon.className = 'bi bi-x-lg';
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    icon.className = 'bi bi-list';
+                    document.body.style.overflow = '';
+                }
+            }
+
+            function closeSidebar() {
+                sidebar.classList.remove('sidebar-open');
+                overlay.classList.remove('overlay-open');
+                icon.className = 'bi bi-list';
+                document.body.style.overflow = '';
+            }
+
+            // Toggle on menu button click
+            menuToggle.addEventListener('click', toggleSidebar);
+
+            // Close on overlay click
+            overlay.addEventListener('click', closeSidebar);
+
+            // Close on sidebar link click (mobile)
+            const sidebarLinks = sidebar.querySelectorAll('.nav-link');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 768) {
+                        closeSidebar();
+                    }
+                });
+            });
+
+            // Close on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeSidebar();
+                }
+            });
+
+            // Handle window resize
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth >= 768) {
+                        closeSidebar();
+                    }
+                }, 100);
+            });
+        });
+    </script>
+    
     {% block scripts %}
     {% endblock %}
 </body>
